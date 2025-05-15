@@ -14,6 +14,14 @@ These experiences inspired me to use artificial intelligence to help both perfum
 
 ---
 
+## 📊 Dataset
+
+This project uses the [Fragrantica.com Fragrance Dataset](https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset?select=fra_perfumes.csv) originally collected by [olgagmiufana1](https://www.kaggle.com/olgagmiufana1) on Kaggle.
+
+The dataset was further **cleaned and processed** for better matching, ensuring high quality and relevant results for your searches.
+
+---
+
 ## 🚀 Features
 
 - **Natural Language Search**: Describe your dream scent in your own words—no need to know the brand or perfume name.
