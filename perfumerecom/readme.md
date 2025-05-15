@@ -6,19 +6,21 @@
 
 ---
 
-## ✨ The Story
+## 📁 Files Included
 
-This project began as a personal journey through countless perfume shops during my travels. I noticed that most customers didn’t come in asking for a specific bottle or brand. Instead, they would describe a cherished memory, a special feeling, or a fleeting emotion—a summer by the sea, a joyful party, or the thrill of new beginnings. Shop staff, often caught off-guard by these requests, would bring out bottle after bottle, and the search could become a long, tiring process.
+- **Perfume_Recommender.ipynb** – Main notebook for recommendations
+- **fragrantica.xlsx** – Cleaned perfume database (required for searching)
+- **faiss_index.bin** – Precomputed search index (for fast recommendations)
+- **perfume_embeddings.npy** – Precomputed AI embeddings of all perfume descriptions
+- **readme.md** – This documentation
 
-These experiences inspired me to use artificial intelligence to help both perfume lovers and small shops quickly retrieve perfumes that truly match the customer’s story or feeling. Perfume is more than a product; it’s a gateway to our deepest memories.
+No setup required: All necessary embeddings and search indexes are already provided!
 
 ---
 
 ## 📊 Dataset
 
-This project uses the [Fragrantica.com Fragrance Dataset](https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset?select=fra_perfumes.csv) originally collected by [olgagmiufana1](https://www.kaggle.com/olgagmiufana1) on Kaggle.
-
-The dataset was further **cleaned and processed** for better matching, ensuring high quality and relevant results for your searches.
+This project uses the [Fragrantica.com Fragrance Dataset](https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset?select=fra_perfumes.csv), further cleaned and formatted as `fragrantica.xlsx` for best results.
 
 ---
 
@@ -39,4 +41,3 @@ The dataset was further **cleaned and processed** for better matching, ensuring 
 ```bash
 git clone https://github.com/akifnu/DSprojects.git
 cd DSprojects/perfumerecom
-
