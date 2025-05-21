@@ -1,53 +1,34 @@
 ## End-to-End Agentic CO₂ Accounting AI – Architecture Overview
 
-This architecture models a modular, agent-based workflow for automated CO₂ accounting, designed for scalable, standards-compliant emissions calculations. Every major AI component interacts closely with others, and humans remain in the loop for expert review and oversight.
+**User Data Input**  
+The journey begins with the User Data Input module, where users supply all the information necessary for CO₂ accounting. This isn’t a one-way street—if something is unclear, the Data Validation AI can request clarification or more details. The user is guided, step by step, to ensure that the data provided is as complete and accurate as possible before it ever enters the automated pipeline.
 
-**Workflow and Interactions**
+**Data Validation AI**  
+Once the initial data is received, the Data Validation AI takes the lead in checking for completeness, correctness, and regulatory relevance. This engine doesn’t work in isolation: when it spots ambiguous or potentially non-compliant entries, it reaches back to the user for more context and consults the Regulation AI for compliance checks. This two-way dialog with both users and Regulation AI forms a critical filter, ensuring only well-vetted information moves forward.
 
-- **User Data Input ↔ Data Validation AI:**  
-  Users submit emissions data. Data Validation AI may request clarifications or further data from users before validation proceeds.
+**Regulation AI**  
+The Regulation AI serves as the system’s compliance guardian. As soon as it receives data or requests from Data Validation AI, or later from Emission Factor or Calculation AI, it reviews the material against the latest standards and rules (like GHG Protocol, LSRG, and SBTi). Its feedback and approvals are essential; it may request changes, flag issues, or give the green light, maintaining active two-way interactions across the architecture to uphold regulatory alignment at every stage.
 
-- **Data Validation AI ↔ Regulation AI:**  
-  If the Data Validation AI detects non-compliance or ambiguity, it forwards data to Regulation AI. Regulation AI reviews, provides feedback or clarification, and may send data back for re-validation.
+**Data Cleaning AI**  
+Clean, consistent data is the backbone of reliable calculations. The Data Cleaning AI picks up validated data and transforms it—fixing formats, standardizing values, and correcting any remaining errors. By delivering high-quality data to the next step, it reduces errors downstream and increases confidence in every result.
 
-- **Data Validation AI → Data Cleaning AI:**  
-  Once validated and compliant, data is sent for standardization and correction.
+**Emission Factor AI**  
+Emission Factor AI is where scientific rigor meets context. For each record, it determines the appropriate emission factor, factoring in details like geography, sector, or activity type. It doesn’t do this alone; every assignment is checked by Regulation AI, which can suggest changes or confirm compliance. This ensures every factor applied is defendable and audit-ready.
 
-- **Data Cleaning AI → Emission Factor AI:**  
-  Cleaned data is provided to Emission Factor AI for assignment of correct emission factors.
+**Calculation AI**  
+With all inputs prepared, Calculation AI performs the actual emissions computations. It’s tightly linked to Regulation AI, checking every calculation for compliance and accuracy. If issues arise—like unexpected results or regulatory mismatches—the module doesn’t proceed silently. It sends results back for further review, or waits for approval, so only solid, compliant outputs continue.
 
-- **Emission Factor AI ↔ Regulation AI:**  
-  Emission Factor AI checks assignments with Regulation AI, which can approve, request changes, or give feedback for compliance.
+**Output AI**  
+The Output AI takes validated calculations and compiles them into final deliverables: spreadsheets, reports, or digital records that embed all relevant data, formulas, and emission factors. But it never operates alone. Before publishing, it waits for final approval from Regulation AI, ensuring nothing non-compliant leaves the system. All outputs are then logged for full traceability.
 
-- **Emission Factor AI → Calculation AI:**  
-  With approved emission factors, data moves to Calculation AI.
+**Version Control AI**  
+Every action, decision, and result from the main modules is meticulously recorded by Version Control AI. This creates a living audit trail, allowing any result to be traced back through every step, change, and approval. It’s the system’s memory, supporting transparency, troubleshooting, and regulatory audits.
 
-- **Calculation AI ↔ Regulation AI:**  
-  Calculation AI validates all results with Regulation AI, which can approve, flag, or require corrections to calculations.
+**Human Expert Review**  
+Finally, whenever an AI encounters an edge case, ambiguous issue, or compliance question it can’t resolve, it hands the matter over to Human Expert Review. This ensures that difficult or unique scenarios always get thoughtful, expert attention—making the system scalable but never out of human hands.
 
-- **Calculation AI → Output AI:**  
-  Once calculations pass compliance, data proceeds to Output AI.
+Together, these modules create a robust, transparent, and collaborative workflow for end-to-end CO₂ accounting, where every interaction is clear, every decision traceable, and human judgment always plays a crucial role.
 
-- **Regulation AI → Output AI:**  
-  Regulation AI gives the final approval before output generation.
-
-- **Output AI → Version Control AI:**  
-  Output AI logs all outputs and reports to Version Control AI for traceability and auditing.
-
-- **Regulation AI → Version Control AI:**  
-  Regulation AI logs all decisions, feedback, and compliance actions for a complete audit trail.
-
-- **Escalation to Human Expert Review:**  
-  At any point, any AI can escalate unclear, non-compliant, or ambiguous cases to a human expert for resolution.
-
-**Key Principles**
-- **Modularity:** Each AI module handles a specific function, making the system flexible and easy to extend.
-- **Comprehensive Logging:** All actions and decisions are tracked by Version Control AI for transparency and auditability.
-- **Human-in-the-Loop:** Ambiguous or difficult cases are always routed to human experts.
-- **Compliance Focus:** Regulation AI ensures every result meets GHG Protocol, LSRG, and SBTi requirements.
-- **Rich Interactions:** Every key check and feedback loop is shown in the diagram for transparency.
-
-See the diagram below for a detailed map of all module interactions.
 
 
 
