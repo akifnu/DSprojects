@@ -1,6 +1,6 @@
 ## End-to-End Agentic CO₂ Accounting AI – Architecture Overview
 
-Modern CO₂ accounting is complex, blending regulatory requirements, data from many sources, and the need for both automation and human oversight. This repository presents a modular, agent-based AI framework designed to handle these challenges at scale. The architecture is captured in the chart below, mapping out how each specialized AI module interacts—from first data input to final output—while ensuring that every step remains transparent, auditable, and aligned with standards like the GHG Protocol, LSRG, and SBTi.
+This repository presents a modular, agent-based AI framework designed to handle GHG accounting challenges at scale. The architecture is captured in the chart below, mapping out how each specialized AI module interacts—from first data input to final output—while ensuring that every step remains transparent, auditable, and aligned with standards like the GHG Protocol, LSRG, and SBTi.
 
 At a high level, the system guides user data through a series of collaborative modules: data is validated, cleaned, matched with emission factors, and calculated for emissions—all under continuous compliance review. Regulation AI is woven throughout, acting as a constant checkpoint, while Version Control AI keeps a full audit trail and any uncertainties are sent to human experts. This flow not only delivers reliable results but also keeps humans in the loop, ready to address unique or ambiguous cases.  
 
