@@ -86,6 +86,11 @@ Every action, decision, and result from the main modules is meticulously recorde
 **Human Expert Review**  
 Finally, whenever an AI encounters an edge case, ambiguous issue, or compliance question it can’t resolve, it hands the matter over to Human Expert Review. This ensures that difficult or unique scenarios always get thoughtful, expert attention—making the system scalable but never out of human hands.
 
+To orchestrate this agentic CO₂ accounting architecture, use **Ray** as the core framework. Ray enables you to define each AI module as an independent actor (agent), manage communication between them, and coordinate their workflows in parallel or in groups. Use **FastAPI** to expose each module as a service when external access or modular deployment is needed. For shared data, logging, and traceability, rely on **PostgreSQL** as a backend database. Integrate **Prometheus** and **Grafana** for system monitoring and performance dashboards. For human-in-the-loop reviews, build a custom dashboard with **Streamlit** that lets experts view and approve flagged cases in real time.
+
+This combination allows you to manage groups of agents, maintain transparency, and ensure every decision is tracked and auditable.
+
+
 Together, these modules create a robust, transparent, and collaborative workflow for end-to-end CO₂ accounting, where every interaction is clear, every decision traceable, and human judgment always plays a crucial role.
 
 
