@@ -67,7 +67,6 @@ flowchart TD
     F -- human output review --> H
     G -- audit/trace requests --> H
 
-
 ## Data Cleaning Engine
 
 Clean, consistent data is the backbone of reliable calculations. The Data Cleaning Engine picks up validated data and transforms it—fixing formats, standardizing values, and correcting any remaining errors. By delivering high-quality data to the next step, it reduces errors downstream and increases confidence in every result.
