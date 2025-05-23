@@ -66,6 +66,7 @@ flowchart TD
     F -- output issues / audit --> C
     F -- human output review --> H
     G -- audit/trace requests --> H
+```
 
 ## Data Cleaning Engine
 
