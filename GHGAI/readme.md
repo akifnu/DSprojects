@@ -20,7 +20,7 @@ Once the initial data is received, the Data Validation Engine takes the lead in 
 
 The Regulation Engine serves as the system’s compliance guardian. As soon as it receives data or requests from Data Validation Engine, or later from Emission Factor or Calculation Engine, it reviews the material against the latest standards and rules (like GHG Protocol, LSRG, and SBTi). Its feedback and approvals are essential; it may request changes, flag issues, or give the green light, maintaining active two-way interactions across the architecture to uphold regulatory alignment at every stage.
 
-
+```mermaid
 flowchart TD
     A[User Data Input Engine]
     B[Data Validation Engine]
