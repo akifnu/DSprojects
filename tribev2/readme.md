@@ -20,7 +20,9 @@
 4. **Run all** — paste your Hugging Face read token when prompted (or set Colab secret `HF_TOKEN`)
 5. Increase `MAX_SCENARIOS` in the notebook toward **318** for the full study
 
-The notebook downloads `scenarios.json` (all 318 text pairs) from GitHub — no audio, no gTTS.
+The notebook downloads pinned deps from `requirements-colab.txt` (torch 2.6 + transformers 4.47.1).
+
+If install fails, use **Runtime → Factory reset runtime**, delete `/content/.tribev2_colab_v3` if present, then **Run all** twice.
 
 ## Local
 

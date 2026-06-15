@@ -1,0 +1,24 @@
+# Pinned for Google Colab + TRIBE v2 text inference (LLaMA 3.2)
+numpy==2.2.6
+torch==2.6.0
+torchvision==0.21.0
+transformers==4.47.1
+accelerate==1.2.1
+huggingface_hub>=0.26.0
+scipy
+pandas
+scikit-learn
+neuralset==0.0.2
+neuraltrain==0.0.2
+exca==0.5.20
+x_transformers==1.27.20
+einops
+pyyaml
+moviepy>=2.2.1
+gtts
+langdetect
+spacy
+soundfile
+Levenshtein
+julius
+safetensors>=0.4.3
