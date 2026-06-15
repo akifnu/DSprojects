@@ -22,9 +22,5 @@ python -m pip install -e .
 echo "==> Running environment check"
 python scripts/check_environment.py
 
-echo
 echo "Setup complete."
-echo "Next steps:"
-echo "  1. export HF_TOKEN=<your huggingface read token>  # required for text inference"
-echo "  2. source .venv/bin/activate"
-echo "  3. python scripts/run_capabilities.py --preload-llama"
+echo "Colab (zero setup): tribev2/notebooks/Kahneman_Framing_RCT.ipynb"
