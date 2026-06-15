@@ -8,7 +8,11 @@
 
 1. Open the link above in a **new browser tab** (not a saved Drive copy)
 2. Runtime → **T4 GPU**
-3. Runtime → **Run all**
+3. Runtime → **Run all** (if runtime restarts once after install, click **Run all** again)
+
+### If you see `cannot import name '_center' from numpy`
+
+The notebook auto-fixes this by pinning `numpy==2.2.6`. After the one-time restart, run all cells again.
 
 ### If you still see `HF_TOKEN` or `/content/DSprojects`
 
