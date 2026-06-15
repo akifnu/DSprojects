@@ -1,30 +1,23 @@
 # TRIBE v2 — Kahneman Framing RCT
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Kahneman_Framing_RCT.ipynb)
+## Open in Colab (use this link)
 
-## Colab (ready to go)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Framing_RCT_NoSetup.ipynb)
 
-**No Hugging Face token. No API keys. No repo clone.**
+**No HF_TOKEN. No secrets. No git clone.**
 
-1. Open the notebook link above
-2. **Runtime → T4 GPU**
-3. **Runtime → Run all**
+1. Open the link above in a **new browser tab** (not a saved Drive copy)
+2. Runtime → **T4 GPU**
+3. Runtime → **Run all**
 
-The notebook installs TRIBE v2, synthesizes 12 gain/loss framing texts as speech, runs inference, and prints paired statistics.
+### If you still see `HF_TOKEN` or `/content/DSprojects`
+
+You are running an **old saved Colab notebook**. Fix:
+
+1. Close that tab
+2. In Google Drive, delete any saved copy named `Kahneman_Framing_RCT`
+3. Open the **Framing_RCT_NoSetup.ipynb** link above
 
 ## Full RCT dataset (optional, local)
 
-The repo also contains a **318-pair / 63,600-trial** text RCT for offline research:
-
-```bash
-cd tribev2
-pip install -r requirements-ci.txt && pip install -e .
-python scripts/generate_rct_dataset.py
-```
-
-See [`data/framing_rct/`](data/framing_rct/README.md).
-
-## References
-
-- [facebook/tribev2](https://huggingface.co/facebook/tribev2)
-- Tversky & Kahneman (1981), *Science*
+318 scenario pairs in `data/framing_rct/` — see [`data/framing_rct/README.md`](data/framing_rct/README.md).
