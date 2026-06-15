@@ -91,6 +91,21 @@ The analysis tests whether **loss-framed** wording produces stronger mean absolu
 
 Results are saved to `outputs/reports/framing_rct_analysis.json`.
 
+## GitHub Actions
+
+| Workflow | Runner | Cost | What it does |
+|----------|--------|------|--------------|
+| `tribev2-ci.yml` | `ubuntu-latest` (CPU) | **Free** on public repos | Unit tests + RCT dataset validation |
+| `tribev2-framing-gpu.yml` | GPU larger runner (T4) | **Paid** (~$0.052/min) | Framing inference smoke test |
+
+GitHub does **not** include GPU runners in the free Actions tier. To run inference in CI:
+
+1. Enable [GPU larger runners](https://docs.github.com/en/actions/reference/runners/larger-runners) on a GitHub Team/Enterprise org
+2. Add repository secret `HF_TOKEN`
+3. Run **Actions → TRIBE v2 Framing GPU → Run workflow** (start with `max_scenarios: 2`)
+
+See [`.github/workflows/README.md`](../.github/workflows/README.md) for full setup. T4 runners have 16 GB VRAM; full inference needs ~40 GB, so use local A100 if the GPU job OOMs.
+
 Example report fields:
 
 ```json

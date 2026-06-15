@@ -37,6 +37,12 @@ def main() -> int:
     parser.add_argument("--generate-only", action="store_true", help="Only build RCT dataset files.")
     parser.add_argument("--preload-llama", action="store_true")
     parser.add_argument("--skip-gpu", action="store_true")
+    parser.add_argument(
+        "--max-scenarios",
+        type=int,
+        default=None,
+        help="Limit inference to the first N scenarios (useful for GPU smoke tests).",
+    )
     args = parser.parse_args()
 
     config = TribeCapabilitiesConfig.load(args.config)
@@ -76,6 +82,10 @@ def main() -> int:
 
     if args.preload_llama:
         preload_llama_weights(config)
+
+    if args.max_scenarios is not None:
+        scenarios = scenarios[: args.max_scenarios]
+        print(f"Limited to {len(scenarios)} scenario(s) for smoke testing.")
 
     model = load_model(config)
     predictions = run_insilico_framing_experiment(
