@@ -1,29 +1,20 @@
-# TRIBE v2 Capability Testing
-
-Evaluate [facebook/tribev2](https://huggingface.co/facebook/tribev2) with repeatable benchmarks and a **large-scale Kahneman framing RCT** (text only).
+# TRIBE v2 — Kahneman Framing RCT
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Kahneman_Framing_RCT.ipynb)
 
-## Kahneman framing RCT (v1)
+## Colab (ready to go)
 
-| | |
-|--|--|
-| Scenario pairs | **318** gain/loss texts |
-| Unique stimuli | **636** |
-| Subjects | **200** |
-| Trial assignments | **63,600** |
-| Modality | **Text only** |
+**No Hugging Face token. No API keys. No repo clone.**
 
-### Run in Google Colab (recommended)
+1. Open the notebook link above
+2. **Runtime → T4 GPU**
+3. **Runtime → Run all**
 
-1. Open the notebook: [`notebooks/Kahneman_Framing_RCT.ipynb`](notebooks/Kahneman_Framing_RCT.ipynb)
-2. Set runtime to **A100 GPU**
-3. Add Colab secret `HF_TOKEN` ([LLaMA 3.2 access](https://huggingface.co/meta-llama/Llama-3.2-3B))
-4. Run all cells
+The notebook installs TRIBE v2, synthesizes 12 gain/loss framing texts as speech, runs inference, and prints paired statistics.
 
-The notebook clones this repo, builds the RCT dataset, and runs TRIBE inference. Start with `--max-scenarios 12`; increase for the full study.
+## Full RCT dataset (optional, local)
 
-### Regenerate dataset locally
+The repo also contains a **318-pair / 63,600-trial** text RCT for offline research:
 
 ```bash
 cd tribev2
@@ -31,30 +22,9 @@ pip install -r requirements-ci.txt && pip install -e .
 python scripts/generate_rct_dataset.py
 ```
 
-### Run inference locally
-
-```bash
-pip install -r requirements.txt
-export HF_TOKEN=<token>
-python scripts/run_framing_rct.py --preload-llama --max-scenarios 12
-```
-
-Dataset files: [`data/framing_rct/`](data/framing_rct/README.md)
-
-## Project layout
-
-```
-tribev2/
-├── notebooks/Kahneman_Framing_RCT.ipynb   # Colab entry point
-├── data/framing_rct/                      # RCT dataset (318 pairs)
-├── scripts/
-│   ├── generate_rct_dataset.py
-│   └── run_framing_rct.py
-└── src/tribe_capabilities/
-```
+See [`data/framing_rct/`](data/framing_rct/README.md).
 
 ## References
 
-- [TRIBE v2 weights](https://huggingface.co/facebook/tribev2)
-- [Official repo](https://github.com/facebookresearch/TRIBEv2)
+- [facebook/tribev2](https://huggingface.co/facebook/tribev2)
 - Tversky & Kahneman (1981), *Science*
