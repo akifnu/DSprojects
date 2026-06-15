@@ -1,0 +1,1 @@
+The country is preparing for an unusual disease expected to kill 600 people. Program C will result in 400 people dying for certain. Program D has a one-third probability that nobody will die and a two-thirds probability that all 600 people will die.

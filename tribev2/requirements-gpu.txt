@@ -1,0 +1,4 @@
+# GPU inference dependencies (GitHub larger runners or local A100)
+-r requirements-ci.txt
+tribev2[plotting] @ git+https://github.com/facebookresearch/TRIBEv2.git
+huggingface_hub>=0.26.0

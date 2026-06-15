@@ -1,0 +1,1 @@
+The country is preparing for an unusual disease expected to kill 600 people. Program A will save 200 people for certain. Program B has a one-third probability that all 600 people will be saved and a two-thirds probability that no one will be saved.

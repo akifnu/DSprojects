@@ -1,0 +1,18 @@
+{
+  "study_id": "kahneman_framing_rct_v1",
+  "title": "Loss vs Gain Framing In-Silico RCT (TRIBE v2)",
+  "design": "within_subjects_crossover",
+  "reference": "Tversky & Kahneman (1981); Kahneman & Tversky (1979) Prospect Theory",
+  "primary_hypothesis": "Loss-framed text stimuli produce systematically different cortical activation patterns than objectively equivalent gain-framed text stimuli.",
+  "behavioral_benchmark": "Humans show framing effects: risk-averse in gain domain, risk-seeking in loss domain.",
+  "kahneman_directional_prediction": "loss_frame_mean_abs_activation > gain_frame_mean_abs_activation",
+  "generated_at": "2026-06-15T20:48:34.444589+00:00",
+  "random_seed": 42,
+  "n_subjects": 200,
+  "n_scenarios": 318,
+  "n_trials": 63600,
+  "design_notes": "Within-subjects crossover RCT with block-randomized presentation order. In-silico inference uses scenario-level paired gain/loss stimuli as statistical units when testing TRIBE v2.",
+  "analysis_unit_for_insilico": "scenario_pair",
+  "assignment_file": "assignments.csv",
+  "unique_stimuli_file": "unique_stimuli.csv"
+}

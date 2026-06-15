@@ -1,0 +1,2873 @@
+{
+  "study_id": "kahneman_framing_rct_v1",
+  "title": "Loss vs Gain Framing In-Silico RCT (TRIBE v2)",
+  "design": "within_subjects_crossover",
+  "reference": "Tversky & Kahneman (1981); Kahneman & Tversky (1979) Prospect Theory",
+  "primary_hypothesis": "Loss-framed text stimuli produce systematically different cortical activation patterns than objectively equivalent gain-framed text stimuli.",
+  "behavioral_benchmark": "Humans show framing effects: risk-averse in gain domain, risk-seeking in loss domain.",
+  "kahneman_directional_prediction": "loss_frame_mean_abs_activation > gain_frame_mean_abs_activation",
+  "scenarios": [
+    {
+      "scenario_id": "asian_disease_classic",
+      "domain": "health",
+      "objective_summary": "600 lives; save 200 certain vs 1/3 chance save all",
+      "gain_frame": "The country is preparing for an unusual disease expected to kill 600 people. Program A will save 200 people for certain. Program B has a one-third probability that all 600 people will be saved and a two-thirds probability that no one will be saved.",
+      "loss_frame": "The country is preparing for an unusual disease expected to kill 600 people. Program C will result in 400 people dying for certain. Program D has a one-third probability that nobody will die and a two-thirds probability that all 600 people will die.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "health_surgery_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 70 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 30 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 75 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 25 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 80 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 20 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 85 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 15 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 90 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 10 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 92 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 8 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 95 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 5 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_surgery_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a surgical procedure. The clinician explains that 97 percent of patients recover fully after treatment.",
+      "loss_frame": "A patient is considering a surgical procedure. The clinician explains that 3 percent of patients do not recover fully after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 70 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 30 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 75 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 25 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 80 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 20 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 85 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 15 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 90 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 10 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 92 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 8 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 95 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 5 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_chemotherapy_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a chemotherapy course. The clinician explains that 97 percent of patients complete treatment without relapse after treatment.",
+      "loss_frame": "A patient is considering a chemotherapy course. The clinician explains that 3 percent of patients do not complete treatment without relapse after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 70 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 30 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 75 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 25 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 80 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 20 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 85 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 15 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 90 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 10 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 92 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 8 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 95 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 5 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_vaccine_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a vaccine. The clinician explains that 97 percent of patients experience no serious side effects after treatment.",
+      "loss_frame": "A patient is considering a vaccine. The clinician explains that 3 percent of patients do not experience no serious side effects after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 70 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 30 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 75 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 25 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 80 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 20 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 85 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 15 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 90 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 10 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 92 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 8 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 95 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 5 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_clinical_trial_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a experimental therapy. The clinician explains that 97 percent of patients show clinical improvement after treatment.",
+      "loss_frame": "A patient is considering a experimental therapy. The clinician explains that 3 percent of patients do not show clinical improvement after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 70 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 30 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 75 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 25 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 80 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 20 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 85 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 15 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 90 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 10 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 92 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 8 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 95 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 5 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_rehab_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a rehabilitation program. The clinician explains that 97 percent of patients regain independent mobility after treatment.",
+      "loss_frame": "A patient is considering a rehabilitation program. The clinician explains that 3 percent of patients do not regain independent mobility after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_70",
+      "domain": "health",
+      "objective_summary": "70% positive outcome equals 30% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 70 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 30 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_75",
+      "domain": "health",
+      "objective_summary": "75% positive outcome equals 25% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 75 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 25 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_80",
+      "domain": "health",
+      "objective_summary": "80% positive outcome equals 20% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 80 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 20 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_85",
+      "domain": "health",
+      "objective_summary": "85% positive outcome equals 15% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 85 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 15 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_90",
+      "domain": "health",
+      "objective_summary": "90% positive outcome equals 10% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 90 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 10 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_92",
+      "domain": "health",
+      "objective_summary": "92% positive outcome equals 8% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 92 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 8 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_95",
+      "domain": "health",
+      "objective_summary": "95% positive outcome equals 5% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 95 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 5 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "health_dental_97",
+      "domain": "health",
+      "objective_summary": "97% positive outcome equals 3% negative outcome",
+      "gain_frame": "A patient is considering a dental implant procedure. The clinician explains that 97 percent of patients heal without complications after treatment.",
+      "loss_frame": "A patient is considering a dental implant procedure. The clinician explains that 3 percent of patients do not heal without complications after treatment.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_500",
+      "domain": "financial",
+      "objective_summary": "Keep $500 for sure vs gamble from $750",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $500 for certain. Option B is a gamble with equal odds to keep $750 or only $250.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $250 for certain and keep $250. Option B is a gamble with equal odds to lose nothing and keep $750, or lose $500 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_550",
+      "domain": "financial",
+      "objective_summary": "Keep $550 for sure vs gamble from $825",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $550 for certain. Option B is a gamble with equal odds to keep $825 or only $275.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $275 for certain and keep $275. Option B is a gamble with equal odds to lose nothing and keep $825, or lose $550 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_600",
+      "domain": "financial",
+      "objective_summary": "Keep $600 for sure vs gamble from $900",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $600 for certain. Option B is a gamble with equal odds to keep $900 or only $300.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $300 for certain and keep $300. Option B is a gamble with equal odds to lose nothing and keep $900, or lose $600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_650",
+      "domain": "financial",
+      "objective_summary": "Keep $650 for sure vs gamble from $975",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $650 for certain. Option B is a gamble with equal odds to keep $975 or only $325.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $325 for certain and keep $325. Option B is a gamble with equal odds to lose nothing and keep $975, or lose $650 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_700",
+      "domain": "financial",
+      "objective_summary": "Keep $700 for sure vs gamble from $1050",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $700 for certain. Option B is a gamble with equal odds to keep $1050 or only $350.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $350 for certain and keep $350. Option B is a gamble with equal odds to lose nothing and keep $1050, or lose $700 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_750",
+      "domain": "financial",
+      "objective_summary": "Keep $750 for sure vs gamble from $1125",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $750 for certain. Option B is a gamble with equal odds to keep $1125 or only $375.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $375 for certain and keep $375. Option B is a gamble with equal odds to lose nothing and keep $1125, or lose $750 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_800",
+      "domain": "financial",
+      "objective_summary": "Keep $800 for sure vs gamble from $1200",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $800 for certain. Option B is a gamble with equal odds to keep $1200 or only $400.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $400 for certain and keep $400. Option B is a gamble with equal odds to lose nothing and keep $1200, or lose $800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_850",
+      "domain": "financial",
+      "objective_summary": "Keep $850 for sure vs gamble from $1275",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $850 for certain. Option B is a gamble with equal odds to keep $1275 or only $425.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $425 for certain and keep $425. Option B is a gamble with equal odds to lose nothing and keep $1275, or lose $850 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_900",
+      "domain": "financial",
+      "objective_summary": "Keep $900 for sure vs gamble from $1350",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $900 for certain. Option B is a gamble with equal odds to keep $1350 or only $450.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $450 for certain and keep $450. Option B is a gamble with equal odds to lose nothing and keep $1350, or lose $900 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_950",
+      "domain": "financial",
+      "objective_summary": "Keep $950 for sure vs gamble from $1425",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $950 for certain. Option B is a gamble with equal odds to keep $1425 or only $475.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $475 for certain and keep $475. Option B is a gamble with equal odds to lose nothing and keep $1425, or lose $950 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1000",
+      "domain": "financial",
+      "objective_summary": "Keep $1000 for sure vs gamble from $1500",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1000 for certain. Option B is a gamble with equal odds to keep $1500 or only $500.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $500 for certain and keep $500. Option B is a gamble with equal odds to lose nothing and keep $1500, or lose $1000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1050",
+      "domain": "financial",
+      "objective_summary": "Keep $1050 for sure vs gamble from $1575",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1050 for certain. Option B is a gamble with equal odds to keep $1575 or only $525.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $525 for certain and keep $525. Option B is a gamble with equal odds to lose nothing and keep $1575, or lose $1050 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1100",
+      "domain": "financial",
+      "objective_summary": "Keep $1100 for sure vs gamble from $1650",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1100 for certain. Option B is a gamble with equal odds to keep $1650 or only $550.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $550 for certain and keep $550. Option B is a gamble with equal odds to lose nothing and keep $1650, or lose $1100 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1150",
+      "domain": "financial",
+      "objective_summary": "Keep $1150 for sure vs gamble from $1725",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1150 for certain. Option B is a gamble with equal odds to keep $1725 or only $575.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $575 for certain and keep $575. Option B is a gamble with equal odds to lose nothing and keep $1725, or lose $1150 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1200",
+      "domain": "financial",
+      "objective_summary": "Keep $1200 for sure vs gamble from $1800",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1200 for certain. Option B is a gamble with equal odds to keep $1800 or only $600.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $600 for certain and keep $600. Option B is a gamble with equal odds to lose nothing and keep $1800, or lose $1200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1250",
+      "domain": "financial",
+      "objective_summary": "Keep $1250 for sure vs gamble from $1875",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1250 for certain. Option B is a gamble with equal odds to keep $1875 or only $625.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $625 for certain and keep $625. Option B is a gamble with equal odds to lose nothing and keep $1875, or lose $1250 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1300",
+      "domain": "financial",
+      "objective_summary": "Keep $1300 for sure vs gamble from $1950",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1300 for certain. Option B is a gamble with equal odds to keep $1950 or only $650.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $650 for certain and keep $650. Option B is a gamble with equal odds to lose nothing and keep $1950, or lose $1300 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1350",
+      "domain": "financial",
+      "objective_summary": "Keep $1350 for sure vs gamble from $2025",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1350 for certain. Option B is a gamble with equal odds to keep $2025 or only $675.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $675 for certain and keep $675. Option B is a gamble with equal odds to lose nothing and keep $2025, or lose $1350 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1400",
+      "domain": "financial",
+      "objective_summary": "Keep $1400 for sure vs gamble from $2100",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1400 for certain. Option B is a gamble with equal odds to keep $2100 or only $700.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $700 for certain and keep $700. Option B is a gamble with equal odds to lose nothing and keep $2100, or lose $1400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1450",
+      "domain": "financial",
+      "objective_summary": "Keep $1450 for sure vs gamble from $2175",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1450 for certain. Option B is a gamble with equal odds to keep $2175 or only $725.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $725 for certain and keep $725. Option B is a gamble with equal odds to lose nothing and keep $2175, or lose $1450 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1500",
+      "domain": "financial",
+      "objective_summary": "Keep $1500 for sure vs gamble from $2250",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1500 for certain. Option B is a gamble with equal odds to keep $2250 or only $750.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $750 for certain and keep $750. Option B is a gamble with equal odds to lose nothing and keep $2250, or lose $1500 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1550",
+      "domain": "financial",
+      "objective_summary": "Keep $1550 for sure vs gamble from $2325",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1550 for certain. Option B is a gamble with equal odds to keep $2325 or only $775.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $775 for certain and keep $775. Option B is a gamble with equal odds to lose nothing and keep $2325, or lose $1550 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1600",
+      "domain": "financial",
+      "objective_summary": "Keep $1600 for sure vs gamble from $2400",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1600 for certain. Option B is a gamble with equal odds to keep $2400 or only $800.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $800 for certain and keep $800. Option B is a gamble with equal odds to lose nothing and keep $2400, or lose $1600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1650",
+      "domain": "financial",
+      "objective_summary": "Keep $1650 for sure vs gamble from $2475",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1650 for certain. Option B is a gamble with equal odds to keep $2475 or only $825.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $825 for certain and keep $825. Option B is a gamble with equal odds to lose nothing and keep $2475, or lose $1650 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1700",
+      "domain": "financial",
+      "objective_summary": "Keep $1700 for sure vs gamble from $2550",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1700 for certain. Option B is a gamble with equal odds to keep $2550 or only $850.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $850 for certain and keep $850. Option B is a gamble with equal odds to lose nothing and keep $2550, or lose $1700 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1750",
+      "domain": "financial",
+      "objective_summary": "Keep $1750 for sure vs gamble from $2625",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1750 for certain. Option B is a gamble with equal odds to keep $2625 or only $875.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $875 for certain and keep $875. Option B is a gamble with equal odds to lose nothing and keep $2625, or lose $1750 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1800",
+      "domain": "financial",
+      "objective_summary": "Keep $1800 for sure vs gamble from $2700",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1800 for certain. Option B is a gamble with equal odds to keep $2700 or only $900.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $900 for certain and keep $900. Option B is a gamble with equal odds to lose nothing and keep $2700, or lose $1800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1850",
+      "domain": "financial",
+      "objective_summary": "Keep $1850 for sure vs gamble from $2775",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1850 for certain. Option B is a gamble with equal odds to keep $2775 or only $925.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $925 for certain and keep $925. Option B is a gamble with equal odds to lose nothing and keep $2775, or lose $1850 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1900",
+      "domain": "financial",
+      "objective_summary": "Keep $1900 for sure vs gamble from $2850",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1900 for certain. Option B is a gamble with equal odds to keep $2850 or only $950.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $950 for certain and keep $950. Option B is a gamble with equal odds to lose nothing and keep $2850, or lose $1900 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_1950",
+      "domain": "financial",
+      "objective_summary": "Keep $1950 for sure vs gamble from $2925",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $1950 for certain. Option B is a gamble with equal odds to keep $2925 or only $975.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $975 for certain and keep $975. Option B is a gamble with equal odds to lose nothing and keep $2925, or lose $1950 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_bonus_keep_2000",
+      "domain": "financial",
+      "objective_summary": "Keep $2000 for sure vs gamble from $3000",
+      "gain_frame": "You receive a year-end bonus decision. Option A lets you keep $2000 for certain. Option B is a gamble with equal odds to keep $3000 or only $1000.",
+      "loss_frame": "You receive a year-end bonus decision. Option A means you lose $1000 for certain and keep $1000. Option B is a gamble with equal odds to lose nothing and keep $3000, or lose $2000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_1000",
+      "domain": "financial",
+      "objective_summary": "Keep $1000 for sure vs gamble from $1500",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $1000 for certain. Option B is a gamble with equal odds to keep $1500 or only $500.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $500 for certain and keep $500. Option B is a gamble with equal odds to lose nothing and keep $1500, or lose $1000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_1200",
+      "domain": "financial",
+      "objective_summary": "Keep $1200 for sure vs gamble from $1800",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $1200 for certain. Option B is a gamble with equal odds to keep $1800 or only $600.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $600 for certain and keep $600. Option B is a gamble with equal odds to lose nothing and keep $1800, or lose $1200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_1400",
+      "domain": "financial",
+      "objective_summary": "Keep $1400 for sure vs gamble from $2100",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $1400 for certain. Option B is a gamble with equal odds to keep $2100 or only $700.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $700 for certain and keep $700. Option B is a gamble with equal odds to lose nothing and keep $2100, or lose $1400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_1600",
+      "domain": "financial",
+      "objective_summary": "Keep $1600 for sure vs gamble from $2400",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $1600 for certain. Option B is a gamble with equal odds to keep $2400 or only $800.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $800 for certain and keep $800. Option B is a gamble with equal odds to lose nothing and keep $2400, or lose $1600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_1800",
+      "domain": "financial",
+      "objective_summary": "Keep $1800 for sure vs gamble from $2700",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $1800 for certain. Option B is a gamble with equal odds to keep $2700 or only $900.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $900 for certain and keep $900. Option B is a gamble with equal odds to lose nothing and keep $2700, or lose $1800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_2000",
+      "domain": "financial",
+      "objective_summary": "Keep $2000 for sure vs gamble from $3000",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $2000 for certain. Option B is a gamble with equal odds to keep $3000 or only $1000.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1000 for certain and keep $1000. Option B is a gamble with equal odds to lose nothing and keep $3000, or lose $2000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_2200",
+      "domain": "financial",
+      "objective_summary": "Keep $2200 for sure vs gamble from $3300",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $2200 for certain. Option B is a gamble with equal odds to keep $3300 or only $1100.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1100 for certain and keep $1100. Option B is a gamble with equal odds to lose nothing and keep $3300, or lose $2200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_2400",
+      "domain": "financial",
+      "objective_summary": "Keep $2400 for sure vs gamble from $3600",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $2400 for certain. Option B is a gamble with equal odds to keep $3600 or only $1200.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1200 for certain and keep $1200. Option B is a gamble with equal odds to lose nothing and keep $3600, or lose $2400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_2600",
+      "domain": "financial",
+      "objective_summary": "Keep $2600 for sure vs gamble from $3900",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $2600 for certain. Option B is a gamble with equal odds to keep $3900 or only $1300.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1300 for certain and keep $1300. Option B is a gamble with equal odds to lose nothing and keep $3900, or lose $2600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_2800",
+      "domain": "financial",
+      "objective_summary": "Keep $2800 for sure vs gamble from $4200",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $2800 for certain. Option B is a gamble with equal odds to keep $4200 or only $1400.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1400 for certain and keep $1400. Option B is a gamble with equal odds to lose nothing and keep $4200, or lose $2800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_3000",
+      "domain": "financial",
+      "objective_summary": "Keep $3000 for sure vs gamble from $4500",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $3000 for certain. Option B is a gamble with equal odds to keep $4500 or only $1500.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1500 for certain and keep $1500. Option B is a gamble with equal odds to lose nothing and keep $4500, or lose $3000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_3200",
+      "domain": "financial",
+      "objective_summary": "Keep $3200 for sure vs gamble from $4800",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $3200 for certain. Option B is a gamble with equal odds to keep $4800 or only $1600.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1600 for certain and keep $1600. Option B is a gamble with equal odds to lose nothing and keep $4800, or lose $3200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_3400",
+      "domain": "financial",
+      "objective_summary": "Keep $3400 for sure vs gamble from $5100",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $3400 for certain. Option B is a gamble with equal odds to keep $5100 or only $1700.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1700 for certain and keep $1700. Option B is a gamble with equal odds to lose nothing and keep $5100, or lose $3400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_3600",
+      "domain": "financial",
+      "objective_summary": "Keep $3600 for sure vs gamble from $5400",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $3600 for certain. Option B is a gamble with equal odds to keep $5400 or only $1800.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1800 for certain and keep $1800. Option B is a gamble with equal odds to lose nothing and keep $5400, or lose $3600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_3800",
+      "domain": "financial",
+      "objective_summary": "Keep $3800 for sure vs gamble from $5700",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $3800 for certain. Option B is a gamble with equal odds to keep $5700 or only $1900.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $1900 for certain and keep $1900. Option B is a gamble with equal odds to lose nothing and keep $5700, or lose $3800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_4000",
+      "domain": "financial",
+      "objective_summary": "Keep $4000 for sure vs gamble from $6000",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $4000 for certain. Option B is a gamble with equal odds to keep $6000 or only $2000.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2000 for certain and keep $2000. Option B is a gamble with equal odds to lose nothing and keep $6000, or lose $4000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_4200",
+      "domain": "financial",
+      "objective_summary": "Keep $4200 for sure vs gamble from $6300",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $4200 for certain. Option B is a gamble with equal odds to keep $6300 or only $2100.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2100 for certain and keep $2100. Option B is a gamble with equal odds to lose nothing and keep $6300, or lose $4200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_4400",
+      "domain": "financial",
+      "objective_summary": "Keep $4400 for sure vs gamble from $6600",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $4400 for certain. Option B is a gamble with equal odds to keep $6600 or only $2200.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2200 for certain and keep $2200. Option B is a gamble with equal odds to lose nothing and keep $6600, or lose $4400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_4600",
+      "domain": "financial",
+      "objective_summary": "Keep $4600 for sure vs gamble from $6900",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $4600 for certain. Option B is a gamble with equal odds to keep $6900 or only $2300.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2300 for certain and keep $2300. Option B is a gamble with equal odds to lose nothing and keep $6900, or lose $4600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_4800",
+      "domain": "financial",
+      "objective_summary": "Keep $4800 for sure vs gamble from $7200",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $4800 for certain. Option B is a gamble with equal odds to keep $7200 or only $2400.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2400 for certain and keep $2400. Option B is a gamble with equal odds to lose nothing and keep $7200, or lose $4800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_5000",
+      "domain": "financial",
+      "objective_summary": "Keep $5000 for sure vs gamble from $7500",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $5000 for certain. Option B is a gamble with equal odds to keep $7500 or only $2500.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2500 for certain and keep $2500. Option B is a gamble with equal odds to lose nothing and keep $7500, or lose $5000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_5200",
+      "domain": "financial",
+      "objective_summary": "Keep $5200 for sure vs gamble from $7800",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $5200 for certain. Option B is a gamble with equal odds to keep $7800 or only $2600.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2600 for certain and keep $2600. Option B is a gamble with equal odds to lose nothing and keep $7800, or lose $5200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_5400",
+      "domain": "financial",
+      "objective_summary": "Keep $5400 for sure vs gamble from $8100",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $5400 for certain. Option B is a gamble with equal odds to keep $8100 or only $2700.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2700 for certain and keep $2700. Option B is a gamble with equal odds to lose nothing and keep $8100, or lose $5400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_5600",
+      "domain": "financial",
+      "objective_summary": "Keep $5600 for sure vs gamble from $8400",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $5600 for certain. Option B is a gamble with equal odds to keep $8400 or only $2800.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2800 for certain and keep $2800. Option B is a gamble with equal odds to lose nothing and keep $8400, or lose $5600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_5800",
+      "domain": "financial",
+      "objective_summary": "Keep $5800 for sure vs gamble from $8700",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $5800 for certain. Option B is a gamble with equal odds to keep $8700 or only $2900.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $2900 for certain and keep $2900. Option B is a gamble with equal odds to lose nothing and keep $8700, or lose $5800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_6000",
+      "domain": "financial",
+      "objective_summary": "Keep $6000 for sure vs gamble from $9000",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $6000 for certain. Option B is a gamble with equal odds to keep $9000 or only $3000.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3000 for certain and keep $3000. Option B is a gamble with equal odds to lose nothing and keep $9000, or lose $6000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_6200",
+      "domain": "financial",
+      "objective_summary": "Keep $6200 for sure vs gamble from $9300",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $6200 for certain. Option B is a gamble with equal odds to keep $9300 or only $3100.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3100 for certain and keep $3100. Option B is a gamble with equal odds to lose nothing and keep $9300, or lose $6200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_6400",
+      "domain": "financial",
+      "objective_summary": "Keep $6400 for sure vs gamble from $9600",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $6400 for certain. Option B is a gamble with equal odds to keep $9600 or only $3200.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3200 for certain and keep $3200. Option B is a gamble with equal odds to lose nothing and keep $9600, or lose $6400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_6600",
+      "domain": "financial",
+      "objective_summary": "Keep $6600 for sure vs gamble from $9900",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $6600 for certain. Option B is a gamble with equal odds to keep $9900 or only $3300.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3300 for certain and keep $3300. Option B is a gamble with equal odds to lose nothing and keep $9900, or lose $6600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_6800",
+      "domain": "financial",
+      "objective_summary": "Keep $6800 for sure vs gamble from $10200",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $6800 for certain. Option B is a gamble with equal odds to keep $10200 or only $3400.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3400 for certain and keep $3400. Option B is a gamble with equal odds to lose nothing and keep $10200, or lose $6800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_7000",
+      "domain": "financial",
+      "objective_summary": "Keep $7000 for sure vs gamble from $10500",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $7000 for certain. Option B is a gamble with equal odds to keep $10500 or only $3500.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3500 for certain and keep $3500. Option B is a gamble with equal odds to lose nothing and keep $10500, or lose $7000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_7200",
+      "domain": "financial",
+      "objective_summary": "Keep $7200 for sure vs gamble from $10800",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $7200 for certain. Option B is a gamble with equal odds to keep $10800 or only $3600.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3600 for certain and keep $3600. Option B is a gamble with equal odds to lose nothing and keep $10800, or lose $7200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_7400",
+      "domain": "financial",
+      "objective_summary": "Keep $7400 for sure vs gamble from $11100",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $7400 for certain. Option B is a gamble with equal odds to keep $11100 or only $3700.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3700 for certain and keep $3700. Option B is a gamble with equal odds to lose nothing and keep $11100, or lose $7400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_7600",
+      "domain": "financial",
+      "objective_summary": "Keep $7600 for sure vs gamble from $11400",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $7600 for certain. Option B is a gamble with equal odds to keep $11400 or only $3800.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3800 for certain and keep $3800. Option B is a gamble with equal odds to lose nothing and keep $11400, or lose $7600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_7800",
+      "domain": "financial",
+      "objective_summary": "Keep $7800 for sure vs gamble from $11700",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $7800 for certain. Option B is a gamble with equal odds to keep $11700 or only $3900.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $3900 for certain and keep $3900. Option B is a gamble with equal odds to lose nothing and keep $11700, or lose $7800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_8000",
+      "domain": "financial",
+      "objective_summary": "Keep $8000 for sure vs gamble from $12000",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $8000 for certain. Option B is a gamble with equal odds to keep $12000 or only $4000.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4000 for certain and keep $4000. Option B is a gamble with equal odds to lose nothing and keep $12000, or lose $8000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_8200",
+      "domain": "financial",
+      "objective_summary": "Keep $8200 for sure vs gamble from $12300",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $8200 for certain. Option B is a gamble with equal odds to keep $12300 or only $4100.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4100 for certain and keep $4100. Option B is a gamble with equal odds to lose nothing and keep $12300, or lose $8200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_8400",
+      "domain": "financial",
+      "objective_summary": "Keep $8400 for sure vs gamble from $12600",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $8400 for certain. Option B is a gamble with equal odds to keep $12600 or only $4200.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4200 for certain and keep $4200. Option B is a gamble with equal odds to lose nothing and keep $12600, or lose $8400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_8600",
+      "domain": "financial",
+      "objective_summary": "Keep $8600 for sure vs gamble from $12900",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $8600 for certain. Option B is a gamble with equal odds to keep $12900 or only $4300.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4300 for certain and keep $4300. Option B is a gamble with equal odds to lose nothing and keep $12900, or lose $8600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_8800",
+      "domain": "financial",
+      "objective_summary": "Keep $8800 for sure vs gamble from $13200",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $8800 for certain. Option B is a gamble with equal odds to keep $13200 or only $4400.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4400 for certain and keep $4400. Option B is a gamble with equal odds to lose nothing and keep $13200, or lose $8800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_9000",
+      "domain": "financial",
+      "objective_summary": "Keep $9000 for sure vs gamble from $13500",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $9000 for certain. Option B is a gamble with equal odds to keep $13500 or only $4500.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4500 for certain and keep $4500. Option B is a gamble with equal odds to lose nothing and keep $13500, or lose $9000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_9200",
+      "domain": "financial",
+      "objective_summary": "Keep $9200 for sure vs gamble from $13800",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $9200 for certain. Option B is a gamble with equal odds to keep $13800 or only $4600.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4600 for certain and keep $4600. Option B is a gamble with equal odds to lose nothing and keep $13800, or lose $9200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_9400",
+      "domain": "financial",
+      "objective_summary": "Keep $9400 for sure vs gamble from $14100",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $9400 for certain. Option B is a gamble with equal odds to keep $14100 or only $4700.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4700 for certain and keep $4700. Option B is a gamble with equal odds to lose nothing and keep $14100, or lose $9400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_9600",
+      "domain": "financial",
+      "objective_summary": "Keep $9600 for sure vs gamble from $14400",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $9600 for certain. Option B is a gamble with equal odds to keep $14400 or only $4800.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4800 for certain and keep $4800. Option B is a gamble with equal odds to lose nothing and keep $14400, or lose $9600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_9800",
+      "domain": "financial",
+      "objective_summary": "Keep $9800 for sure vs gamble from $14700",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $9800 for certain. Option B is a gamble with equal odds to keep $14700 or only $4900.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $4900 for certain and keep $4900. Option B is a gamble with equal odds to lose nothing and keep $14700, or lose $9800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_investment_keep_10000",
+      "domain": "financial",
+      "objective_summary": "Keep $10000 for sure vs gamble from $15000",
+      "gain_frame": "You receive a retirement fund decision. Option A lets you keep $10000 for certain. Option B is a gamble with equal odds to keep $15000 or only $5000.",
+      "loss_frame": "You receive a retirement fund decision. Option A means you lose $5000 for certain and keep $5000. Option B is a gamble with equal odds to lose nothing and keep $15000, or lose $10000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_200",
+      "domain": "financial",
+      "objective_summary": "Keep $200 for sure vs gamble from $300",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $200 for certain. Option B is a gamble with equal odds to keep $300 or only $100.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $100 for certain and keep $100. Option B is a gamble with equal odds to lose nothing and keep $300, or lose $200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_300",
+      "domain": "financial",
+      "objective_summary": "Keep $300 for sure vs gamble from $450",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $300 for certain. Option B is a gamble with equal odds to keep $450 or only $150.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $150 for certain and keep $150. Option B is a gamble with equal odds to lose nothing and keep $450, or lose $300 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_400",
+      "domain": "financial",
+      "objective_summary": "Keep $400 for sure vs gamble from $600",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $400 for certain. Option B is a gamble with equal odds to keep $600 or only $200.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $200 for certain and keep $200. Option B is a gamble with equal odds to lose nothing and keep $600, or lose $400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_500",
+      "domain": "financial",
+      "objective_summary": "Keep $500 for sure vs gamble from $750",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $500 for certain. Option B is a gamble with equal odds to keep $750 or only $250.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $250 for certain and keep $250. Option B is a gamble with equal odds to lose nothing and keep $750, or lose $500 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_600",
+      "domain": "financial",
+      "objective_summary": "Keep $600 for sure vs gamble from $900",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $600 for certain. Option B is a gamble with equal odds to keep $900 or only $300.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $300 for certain and keep $300. Option B is a gamble with equal odds to lose nothing and keep $900, or lose $600 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_700",
+      "domain": "financial",
+      "objective_summary": "Keep $700 for sure vs gamble from $1050",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $700 for certain. Option B is a gamble with equal odds to keep $1050 or only $350.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $350 for certain and keep $350. Option B is a gamble with equal odds to lose nothing and keep $1050, or lose $700 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_800",
+      "domain": "financial",
+      "objective_summary": "Keep $800 for sure vs gamble from $1200",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $800 for certain. Option B is a gamble with equal odds to keep $1200 or only $400.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $400 for certain and keep $400. Option B is a gamble with equal odds to lose nothing and keep $1200, or lose $800 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_900",
+      "domain": "financial",
+      "objective_summary": "Keep $900 for sure vs gamble from $1350",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $900 for certain. Option B is a gamble with equal odds to keep $1350 or only $450.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $450 for certain and keep $450. Option B is a gamble with equal odds to lose nothing and keep $1350, or lose $900 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1000",
+      "domain": "financial",
+      "objective_summary": "Keep $1000 for sure vs gamble from $1500",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1000 for certain. Option B is a gamble with equal odds to keep $1500 or only $500.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $500 for certain and keep $500. Option B is a gamble with equal odds to lose nothing and keep $1500, or lose $1000 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1100",
+      "domain": "financial",
+      "objective_summary": "Keep $1100 for sure vs gamble from $1650",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1100 for certain. Option B is a gamble with equal odds to keep $1650 or only $550.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $550 for certain and keep $550. Option B is a gamble with equal odds to lose nothing and keep $1650, or lose $1100 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1200",
+      "domain": "financial",
+      "objective_summary": "Keep $1200 for sure vs gamble from $1800",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1200 for certain. Option B is a gamble with equal odds to keep $1800 or only $600.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $600 for certain and keep $600. Option B is a gamble with equal odds to lose nothing and keep $1800, or lose $1200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1300",
+      "domain": "financial",
+      "objective_summary": "Keep $1300 for sure vs gamble from $1950",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1300 for certain. Option B is a gamble with equal odds to keep $1950 or only $650.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $650 for certain and keep $650. Option B is a gamble with equal odds to lose nothing and keep $1950, or lose $1300 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1400",
+      "domain": "financial",
+      "objective_summary": "Keep $1400 for sure vs gamble from $2100",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1400 for certain. Option B is a gamble with equal odds to keep $2100 or only $700.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $700 for certain and keep $700. Option B is a gamble with equal odds to lose nothing and keep $2100, or lose $1400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_tuition_keep_1500",
+      "domain": "financial",
+      "objective_summary": "Keep $1500 for sure vs gamble from $2250",
+      "gain_frame": "You receive a tuition refund decision. Option A lets you keep $1500 for certain. Option B is a gamble with equal odds to keep $2250 or only $750.",
+      "loss_frame": "You receive a tuition refund decision. Option A means you lose $750 for certain and keep $750. Option B is a gamble with equal odds to lose nothing and keep $2250, or lose $1500 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_50",
+      "domain": "financial",
+      "objective_summary": "Keep $50 for sure vs gamble from $75",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $50 for certain. Option B is a gamble with equal odds to keep $75 or only $25.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $25 for certain and keep $25. Option B is a gamble with equal odds to lose nothing and keep $75, or lose $50 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_75",
+      "domain": "financial",
+      "objective_summary": "Keep $75 for sure vs gamble from $112",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $75 for certain. Option B is a gamble with equal odds to keep $112 or only $38.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $37 for certain and keep $38. Option B is a gamble with equal odds to lose nothing and keep $112, or lose $74 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_100",
+      "domain": "financial",
+      "objective_summary": "Keep $100 for sure vs gamble from $150",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $100 for certain. Option B is a gamble with equal odds to keep $150 or only $50.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $50 for certain and keep $50. Option B is a gamble with equal odds to lose nothing and keep $150, or lose $100 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_125",
+      "domain": "financial",
+      "objective_summary": "Keep $125 for sure vs gamble from $187",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $125 for certain. Option B is a gamble with equal odds to keep $187 or only $63.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $62 for certain and keep $63. Option B is a gamble with equal odds to lose nothing and keep $187, or lose $124 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_150",
+      "domain": "financial",
+      "objective_summary": "Keep $150 for sure vs gamble from $225",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $150 for certain. Option B is a gamble with equal odds to keep $225 or only $75.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $75 for certain and keep $75. Option B is a gamble with equal odds to lose nothing and keep $225, or lose $150 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_175",
+      "domain": "financial",
+      "objective_summary": "Keep $175 for sure vs gamble from $262",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $175 for certain. Option B is a gamble with equal odds to keep $262 or only $88.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $87 for certain and keep $88. Option B is a gamble with equal odds to lose nothing and keep $262, or lose $174 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_200",
+      "domain": "financial",
+      "objective_summary": "Keep $200 for sure vs gamble from $300",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $200 for certain. Option B is a gamble with equal odds to keep $300 or only $100.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $100 for certain and keep $100. Option B is a gamble with equal odds to lose nothing and keep $300, or lose $200 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_225",
+      "domain": "financial",
+      "objective_summary": "Keep $225 for sure vs gamble from $337",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $225 for certain. Option B is a gamble with equal odds to keep $337 or only $113.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $112 for certain and keep $113. Option B is a gamble with equal odds to lose nothing and keep $337, or lose $224 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_250",
+      "domain": "financial",
+      "objective_summary": "Keep $250 for sure vs gamble from $375",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $250 for certain. Option B is a gamble with equal odds to keep $375 or only $125.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $125 for certain and keep $125. Option B is a gamble with equal odds to lose nothing and keep $375, or lose $250 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_275",
+      "domain": "financial",
+      "objective_summary": "Keep $275 for sure vs gamble from $412",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $275 for certain. Option B is a gamble with equal odds to keep $412 or only $138.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $137 for certain and keep $138. Option B is a gamble with equal odds to lose nothing and keep $412, or lose $274 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_300",
+      "domain": "financial",
+      "objective_summary": "Keep $300 for sure vs gamble from $450",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $300 for certain. Option B is a gamble with equal odds to keep $450 or only $150.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $150 for certain and keep $150. Option B is a gamble with equal odds to lose nothing and keep $450, or lose $300 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_325",
+      "domain": "financial",
+      "objective_summary": "Keep $325 for sure vs gamble from $487",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $325 for certain. Option B is a gamble with equal odds to keep $487 or only $163.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $162 for certain and keep $163. Option B is a gamble with equal odds to lose nothing and keep $487, or lose $324 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_350",
+      "domain": "financial",
+      "objective_summary": "Keep $350 for sure vs gamble from $525",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $350 for certain. Option B is a gamble with equal odds to keep $525 or only $175.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $175 for certain and keep $175. Option B is a gamble with equal odds to lose nothing and keep $525, or lose $350 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_375",
+      "domain": "financial",
+      "objective_summary": "Keep $375 for sure vs gamble from $562",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $375 for certain. Option B is a gamble with equal odds to keep $562 or only $188.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $187 for certain and keep $188. Option B is a gamble with equal odds to lose nothing and keep $562, or lose $374 and keep $1.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "financial_rent_keep_400",
+      "domain": "financial",
+      "objective_summary": "Keep $400 for sure vs gamble from $600",
+      "gain_frame": "You receive a rent discount decision. Option A lets you keep $400 for certain. Option B is a gamble with equal odds to keep $600 or only $200.",
+      "loss_frame": "You receive a rent discount decision. Option A means you lose $200 for certain and keep $200. Option B is a gamble with equal odds to lose nothing and keep $600, or lose $400 and keep $0.",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "employment_factory_55",
+      "domain": "economic",
+      "objective_summary": "55% keep jobs equals 45% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 55 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 45 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_60",
+      "domain": "economic",
+      "objective_summary": "60% keep jobs equals 40% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 60 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 40 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_65",
+      "domain": "economic",
+      "objective_summary": "65% keep jobs equals 35% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 65 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 35 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_70",
+      "domain": "economic",
+      "objective_summary": "70% keep jobs equals 30% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 70 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 30 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_75",
+      "domain": "economic",
+      "objective_summary": "75% keep jobs equals 25% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 75 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 25 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_80",
+      "domain": "economic",
+      "objective_summary": "80% keep jobs equals 20% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 80 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 20 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_85",
+      "domain": "economic",
+      "objective_summary": "85% keep jobs equals 15% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 85 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 15 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_90",
+      "domain": "economic",
+      "objective_summary": "90% keep jobs equals 10% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 90 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 10 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_factory_95",
+      "domain": "economic",
+      "objective_summary": "95% keep jobs equals 5% lose jobs",
+      "gain_frame": "An economic report on the factory says a proposed policy will help 95 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the factory says a proposed policy means 5 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_55",
+      "domain": "economic",
+      "objective_summary": "55% keep jobs equals 45% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 55 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 45 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_60",
+      "domain": "economic",
+      "objective_summary": "60% keep jobs equals 40% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 60 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 40 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_65",
+      "domain": "economic",
+      "objective_summary": "65% keep jobs equals 35% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 65 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 35 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_70",
+      "domain": "economic",
+      "objective_summary": "70% keep jobs equals 30% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 70 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 30 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_75",
+      "domain": "economic",
+      "objective_summary": "75% keep jobs equals 25% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 75 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 25 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_80",
+      "domain": "economic",
+      "objective_summary": "80% keep jobs equals 20% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 80 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 20 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_85",
+      "domain": "economic",
+      "objective_summary": "85% keep jobs equals 15% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 85 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 15 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_90",
+      "domain": "economic",
+      "objective_summary": "90% keep jobs equals 10% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 90 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 10 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_hospital_95",
+      "domain": "economic",
+      "objective_summary": "95% keep jobs equals 5% lose jobs",
+      "gain_frame": "An economic report on the hospital says a proposed policy will help 95 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the hospital says a proposed policy means 5 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_55",
+      "domain": "economic",
+      "objective_summary": "55% keep jobs equals 45% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 55 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 45 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_60",
+      "domain": "economic",
+      "objective_summary": "60% keep jobs equals 40% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 60 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 40 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_65",
+      "domain": "economic",
+      "objective_summary": "65% keep jobs equals 35% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 65 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 35 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_70",
+      "domain": "economic",
+      "objective_summary": "70% keep jobs equals 30% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 70 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 30 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_75",
+      "domain": "economic",
+      "objective_summary": "75% keep jobs equals 25% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 75 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 25 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_80",
+      "domain": "economic",
+      "objective_summary": "80% keep jobs equals 20% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 80 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 20 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_85",
+      "domain": "economic",
+      "objective_summary": "85% keep jobs equals 15% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 85 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 15 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_90",
+      "domain": "economic",
+      "objective_summary": "90% keep jobs equals 10% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 90 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 10 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_school_district_95",
+      "domain": "economic",
+      "objective_summary": "95% keep jobs equals 5% lose jobs",
+      "gain_frame": "An economic report on the school district says a proposed policy will help 95 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the school district says a proposed policy means 5 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_55",
+      "domain": "economic",
+      "objective_summary": "55% keep jobs equals 45% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 55 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 45 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_60",
+      "domain": "economic",
+      "objective_summary": "60% keep jobs equals 40% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 60 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 40 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_65",
+      "domain": "economic",
+      "objective_summary": "65% keep jobs equals 35% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 65 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 35 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_70",
+      "domain": "economic",
+      "objective_summary": "70% keep jobs equals 30% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 70 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 30 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_75",
+      "domain": "economic",
+      "objective_summary": "75% keep jobs equals 25% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 75 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 25 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_80",
+      "domain": "economic",
+      "objective_summary": "80% keep jobs equals 20% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 80 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 20 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_85",
+      "domain": "economic",
+      "objective_summary": "85% keep jobs equals 15% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 85 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 15 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_90",
+      "domain": "economic",
+      "objective_summary": "90% keep jobs equals 10% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 90 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 10 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_tech_company_95",
+      "domain": "economic",
+      "objective_summary": "95% keep jobs equals 5% lose jobs",
+      "gain_frame": "An economic report on the tech company says a proposed policy will help 95 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the tech company says a proposed policy means 5 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_55",
+      "domain": "economic",
+      "objective_summary": "55% keep jobs equals 45% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 55 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 45 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_60",
+      "domain": "economic",
+      "objective_summary": "60% keep jobs equals 40% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 60 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 40 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_65",
+      "domain": "economic",
+      "objective_summary": "65% keep jobs equals 35% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 65 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 35 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_70",
+      "domain": "economic",
+      "objective_summary": "70% keep jobs equals 30% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 70 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 30 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_75",
+      "domain": "economic",
+      "objective_summary": "75% keep jobs equals 25% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 75 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 25 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_80",
+      "domain": "economic",
+      "objective_summary": "80% keep jobs equals 20% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 80 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 20 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_85",
+      "domain": "economic",
+      "objective_summary": "85% keep jobs equals 15% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 85 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 15 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_90",
+      "domain": "economic",
+      "objective_summary": "90% keep jobs equals 10% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 90 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 10 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "employment_city_agency_95",
+      "domain": "economic",
+      "objective_summary": "95% keep jobs equals 5% lose jobs",
+      "gain_frame": "An economic report on the city agency says a proposed policy will help 95 percent of workers keep their jobs over the next year.",
+      "loss_frame": "An economic report on the city agency says a proposed policy means 5 percent of workers will lose their jobs over the next year.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "education_midterm_50",
+      "domain": "education",
+      "objective_summary": "50% correct equals 50% incorrect",
+      "gain_frame": "A student opens midterm results showing 50 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 50 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_55",
+      "domain": "education",
+      "objective_summary": "55% correct equals 45% incorrect",
+      "gain_frame": "A student opens midterm results showing 55 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 45 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_60",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect",
+      "gain_frame": "A student opens midterm results showing 60 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 40 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_65",
+      "domain": "education",
+      "objective_summary": "65% correct equals 35% incorrect",
+      "gain_frame": "A student opens midterm results showing 65 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 35 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_70",
+      "domain": "education",
+      "objective_summary": "70% correct equals 30% incorrect",
+      "gain_frame": "A student opens midterm results showing 70 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 30 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_75",
+      "domain": "education",
+      "objective_summary": "75% correct equals 25% incorrect",
+      "gain_frame": "A student opens midterm results showing 75 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 25 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_80",
+      "domain": "education",
+      "objective_summary": "80% correct equals 20% incorrect",
+      "gain_frame": "A student opens midterm results showing 80 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 20 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_85",
+      "domain": "education",
+      "objective_summary": "85% correct equals 15% incorrect",
+      "gain_frame": "A student opens midterm results showing 85 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 15 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_midterm_90",
+      "domain": "education",
+      "objective_summary": "90% correct equals 10% incorrect",
+      "gain_frame": "A student opens midterm results showing 90 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens midterm results showing 10 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_50",
+      "domain": "education",
+      "objective_summary": "50% correct equals 50% incorrect",
+      "gain_frame": "A student opens final results showing 50 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 50 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_55",
+      "domain": "education",
+      "objective_summary": "55% correct equals 45% incorrect",
+      "gain_frame": "A student opens final results showing 55 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 45 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_60",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect",
+      "gain_frame": "A student opens final results showing 60 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 40 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_65",
+      "domain": "education",
+      "objective_summary": "65% correct equals 35% incorrect",
+      "gain_frame": "A student opens final results showing 65 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 35 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_70",
+      "domain": "education",
+      "objective_summary": "70% correct equals 30% incorrect",
+      "gain_frame": "A student opens final results showing 70 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 30 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_75",
+      "domain": "education",
+      "objective_summary": "75% correct equals 25% incorrect",
+      "gain_frame": "A student opens final results showing 75 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 25 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_80",
+      "domain": "education",
+      "objective_summary": "80% correct equals 20% incorrect",
+      "gain_frame": "A student opens final results showing 80 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 20 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_85",
+      "domain": "education",
+      "objective_summary": "85% correct equals 15% incorrect",
+      "gain_frame": "A student opens final results showing 85 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 15 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_final_90",
+      "domain": "education",
+      "objective_summary": "90% correct equals 10% incorrect",
+      "gain_frame": "A student opens final results showing 90 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens final results showing 10 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_50",
+      "domain": "education",
+      "objective_summary": "50% correct equals 50% incorrect",
+      "gain_frame": "A student opens licensing results showing 50 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 50 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_55",
+      "domain": "education",
+      "objective_summary": "55% correct equals 45% incorrect",
+      "gain_frame": "A student opens licensing results showing 55 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 45 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_60",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect",
+      "gain_frame": "A student opens licensing results showing 60 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 40 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_65",
+      "domain": "education",
+      "objective_summary": "65% correct equals 35% incorrect",
+      "gain_frame": "A student opens licensing results showing 65 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 35 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_70",
+      "domain": "education",
+      "objective_summary": "70% correct equals 30% incorrect",
+      "gain_frame": "A student opens licensing results showing 70 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 30 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_75",
+      "domain": "education",
+      "objective_summary": "75% correct equals 25% incorrect",
+      "gain_frame": "A student opens licensing results showing 75 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 25 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_80",
+      "domain": "education",
+      "objective_summary": "80% correct equals 20% incorrect",
+      "gain_frame": "A student opens licensing results showing 80 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 20 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_85",
+      "domain": "education",
+      "objective_summary": "85% correct equals 15% incorrect",
+      "gain_frame": "A student opens licensing results showing 85 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 15 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_licensing_90",
+      "domain": "education",
+      "objective_summary": "90% correct equals 10% incorrect",
+      "gain_frame": "A student opens licensing results showing 90 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens licensing results showing 10 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_50",
+      "domain": "education",
+      "objective_summary": "50% correct equals 50% incorrect",
+      "gain_frame": "A student opens certification results showing 50 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 50 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_55",
+      "domain": "education",
+      "objective_summary": "55% correct equals 45% incorrect",
+      "gain_frame": "A student opens certification results showing 55 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 45 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_60",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect",
+      "gain_frame": "A student opens certification results showing 60 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 40 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_65",
+      "domain": "education",
+      "objective_summary": "65% correct equals 35% incorrect",
+      "gain_frame": "A student opens certification results showing 65 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 35 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_70",
+      "domain": "education",
+      "objective_summary": "70% correct equals 30% incorrect",
+      "gain_frame": "A student opens certification results showing 70 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 30 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_75",
+      "domain": "education",
+      "objective_summary": "75% correct equals 25% incorrect",
+      "gain_frame": "A student opens certification results showing 75 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 25 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_80",
+      "domain": "education",
+      "objective_summary": "80% correct equals 20% incorrect",
+      "gain_frame": "A student opens certification results showing 80 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 20 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_85",
+      "domain": "education",
+      "objective_summary": "85% correct equals 15% incorrect",
+      "gain_frame": "A student opens certification results showing 85 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 15 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_certification_90",
+      "domain": "education",
+      "objective_summary": "90% correct equals 10% incorrect",
+      "gain_frame": "A student opens certification results showing 90 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens certification results showing 10 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_50",
+      "domain": "education",
+      "objective_summary": "50% correct equals 50% incorrect",
+      "gain_frame": "A student opens placement results showing 50 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 50 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_55",
+      "domain": "education",
+      "objective_summary": "55% correct equals 45% incorrect",
+      "gain_frame": "A student opens placement results showing 55 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 45 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_60",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect",
+      "gain_frame": "A student opens placement results showing 60 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 40 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_65",
+      "domain": "education",
+      "objective_summary": "65% correct equals 35% incorrect",
+      "gain_frame": "A student opens placement results showing 65 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 35 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_70",
+      "domain": "education",
+      "objective_summary": "70% correct equals 30% incorrect",
+      "gain_frame": "A student opens placement results showing 70 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 30 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_75",
+      "domain": "education",
+      "objective_summary": "75% correct equals 25% incorrect",
+      "gain_frame": "A student opens placement results showing 75 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 25 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_80",
+      "domain": "education",
+      "objective_summary": "80% correct equals 20% incorrect",
+      "gain_frame": "A student opens placement results showing 80 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 20 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_85",
+      "domain": "education",
+      "objective_summary": "85% correct equals 15% incorrect",
+      "gain_frame": "A student opens placement results showing 85 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 15 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "education_placement_90",
+      "domain": "education",
+      "objective_summary": "90% correct equals 10% incorrect",
+      "gain_frame": "A student opens placement results showing 90 percent of answers were correct and considers how to study for the next assessment.",
+      "loss_frame": "A student opens placement results showing 10 percent of answers were incorrect and considers how to study for the next assessment.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_60",
+      "domain": "consumer",
+      "objective_summary": "60% lean equals 40% fat",
+      "gain_frame": "A product label states the item is 60 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 40 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_70",
+      "domain": "consumer",
+      "objective_summary": "70% lean equals 30% fat",
+      "gain_frame": "A product label states the item is 70 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 30 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_75",
+      "domain": "consumer",
+      "objective_summary": "75% lean equals 25% fat",
+      "gain_frame": "A product label states the item is 75 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 25 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_80",
+      "domain": "consumer",
+      "objective_summary": "80% lean equals 20% fat",
+      "gain_frame": "A product label states the item is 80 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 20 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_85",
+      "domain": "consumer",
+      "objective_summary": "85% lean equals 15% fat",
+      "gain_frame": "A product label states the item is 85 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 15 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_90",
+      "domain": "consumer",
+      "objective_summary": "90% lean equals 10% fat",
+      "gain_frame": "A product label states the item is 90 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 10 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_ground_beef_95",
+      "domain": "consumer",
+      "objective_summary": "95% lean equals 5% fat",
+      "gain_frame": "A product label states the item is 95 percent lean. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 5 percent fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_60",
+      "domain": "consumer",
+      "objective_summary": "60% fat-free equals 40% full-fat",
+      "gain_frame": "A product label states the item is 60 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 40 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_70",
+      "domain": "consumer",
+      "objective_summary": "70% fat-free equals 30% full-fat",
+      "gain_frame": "A product label states the item is 70 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 30 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_75",
+      "domain": "consumer",
+      "objective_summary": "75% fat-free equals 25% full-fat",
+      "gain_frame": "A product label states the item is 75 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 25 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_80",
+      "domain": "consumer",
+      "objective_summary": "80% fat-free equals 20% full-fat",
+      "gain_frame": "A product label states the item is 80 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 20 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_85",
+      "domain": "consumer",
+      "objective_summary": "85% fat-free equals 15% full-fat",
+      "gain_frame": "A product label states the item is 85 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 15 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_90",
+      "domain": "consumer",
+      "objective_summary": "90% fat-free equals 10% full-fat",
+      "gain_frame": "A product label states the item is 90 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 10 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_yogurt_95",
+      "domain": "consumer",
+      "objective_summary": "95% fat-free equals 5% full-fat",
+      "gain_frame": "A product label states the item is 95 percent fat-free. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 5 percent full-fat. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_60",
+      "domain": "consumer",
+      "objective_summary": "60% charge remaining equals 40% charge depleted",
+      "gain_frame": "A product label states the item is 60 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 40 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_70",
+      "domain": "consumer",
+      "objective_summary": "70% charge remaining equals 30% charge depleted",
+      "gain_frame": "A product label states the item is 70 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 30 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_75",
+      "domain": "consumer",
+      "objective_summary": "75% charge remaining equals 25% charge depleted",
+      "gain_frame": "A product label states the item is 75 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 25 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_80",
+      "domain": "consumer",
+      "objective_summary": "80% charge remaining equals 20% charge depleted",
+      "gain_frame": "A product label states the item is 80 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 20 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_85",
+      "domain": "consumer",
+      "objective_summary": "85% charge remaining equals 15% charge depleted",
+      "gain_frame": "A product label states the item is 85 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 15 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_90",
+      "domain": "consumer",
+      "objective_summary": "90% charge remaining equals 10% charge depleted",
+      "gain_frame": "A product label states the item is 90 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 10 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_battery_95",
+      "domain": "consumer",
+      "objective_summary": "95% charge remaining equals 5% charge depleted",
+      "gain_frame": "A product label states the item is 95 percent charge remaining. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 5 percent charge depleted. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_60",
+      "domain": "consumer",
+      "objective_summary": "60% contaminants removed equals 40% contaminants remaining",
+      "gain_frame": "A product label states the item is 60 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 40 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_70",
+      "domain": "consumer",
+      "objective_summary": "70% contaminants removed equals 30% contaminants remaining",
+      "gain_frame": "A product label states the item is 70 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 30 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_75",
+      "domain": "consumer",
+      "objective_summary": "75% contaminants removed equals 25% contaminants remaining",
+      "gain_frame": "A product label states the item is 75 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 25 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_80",
+      "domain": "consumer",
+      "objective_summary": "80% contaminants removed equals 20% contaminants remaining",
+      "gain_frame": "A product label states the item is 80 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 20 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_85",
+      "domain": "consumer",
+      "objective_summary": "85% contaminants removed equals 15% contaminants remaining",
+      "gain_frame": "A product label states the item is 85 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 15 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_90",
+      "domain": "consumer",
+      "objective_summary": "90% contaminants removed equals 10% contaminants remaining",
+      "gain_frame": "A product label states the item is 90 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 10 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "consumer_filter_95",
+      "domain": "consumer",
+      "objective_summary": "95% contaminants removed equals 5% contaminants remaining",
+      "gain_frame": "A product label states the item is 95 percent contaminants removed. A shopper decides whether it meets their standard.",
+      "loss_frame": "A product label states the item is 5 percent contaminants remaining. A shopper decides whether it meets their standard.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "environment_river_10",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 10% equals 90% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 10 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 90 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_15",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 15% equals 85% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 15 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 85 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_20",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 20% equals 80% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 20 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 80 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_25",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 25% equals 75% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 25 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 75 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_30",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 30% equals 70% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 30 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 70 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_35",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 35% equals 65% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 35 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 65 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_40",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 40% equals 60% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 40 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 60 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_45",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 45% equals 55% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 45 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 55 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_river_50",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 50% equals 50% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the river by 50 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 50 percent of current pollution in the river within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_10",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 10% equals 90% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 10 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 90 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_15",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 15% equals 85% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 15 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 85 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_20",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 20% equals 80% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 20 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 80 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_25",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 25% equals 75% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 25 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 75 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_30",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 30% equals 70% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 30 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 70 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_35",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 35% equals 65% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 35 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 65 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_40",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 40% equals 60% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 40 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 60 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_45",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 45% equals 55% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 45 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 55 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_city_air_50",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 50% equals 50% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the city air by 50 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 50 percent of current pollution in the city air within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_10",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 10% equals 90% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 10 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 90 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_15",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 15% equals 85% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 15 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 85 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_20",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 20% equals 80% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 20 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 80 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_25",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 25% equals 75% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 25 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 75 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_30",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 30% equals 70% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 30 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 70 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_35",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 35% equals 65% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 35 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 65 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_40",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 40% equals 60% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 40 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 60 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_45",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 45% equals 55% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 45 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 55 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_industrial_zone_50",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 50% equals 50% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the industrial zone by 50 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 50 percent of current pollution in the industrial zone within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_10",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 10% equals 90% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 10 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 90 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_15",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 15% equals 85% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 15 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 85 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_20",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 20% equals 80% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 20 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 80 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_25",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 25% equals 75% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 25 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 75 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_30",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 30% equals 70% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 30 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 70 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_35",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 35% equals 65% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 35 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 65 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_40",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 40% equals 60% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 40 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 60 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_45",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 45% equals 55% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 45 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 55 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_coastal_wetland_50",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 50% equals 50% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the coastal wetland by 50 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 50 percent of current pollution in the coastal wetland within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_10",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 10% equals 90% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 10 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 90 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_15",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 15% equals 85% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 15 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 85 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_20",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 20% equals 80% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 20 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 80 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_25",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 25% equals 75% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 25 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 75 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_30",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 30% equals 70% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 30 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 70 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_35",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 35% equals 65% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 35 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 65 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_40",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 40% equals 60% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 40 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 60 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_45",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 45% equals 55% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 45 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 55 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "environment_national_park_50",
+      "domain": "environment",
+      "objective_summary": "Reduce pollution 50% equals 50% remains",
+      "gain_frame": "An environmental report says a cleanup plan would reduce pollution in the national park by 50 percent within five years.",
+      "loss_frame": "An environmental report says a cleanup plan would still leave 50 percent of current pollution in the national park within five years.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    }
+  ]
+}

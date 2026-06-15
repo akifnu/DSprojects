@@ -1,0 +1,1 @@
+You have been given $30 in cash. You must choose between two options. Option A means you will lose $10 for sure, leaving you with $20. Option B is a gamble with a fifty-fifty chance to lose nothing and keep $30, or lose $20 and keep only $10. Which option do you choose?

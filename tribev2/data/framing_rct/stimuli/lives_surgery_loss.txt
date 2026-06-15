@@ -1,0 +1,1 @@
+A patient is considering a surgical procedure. The surgeon explains that the operation has a 10 percent failure rate, meaning one out of ten patients do not survive the surgery. The patient must decide whether to proceed with the operation.

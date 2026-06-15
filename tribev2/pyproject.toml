@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tribe-capabilities"
+version = "0.1.0"
+description = "Capability testing harness for facebook/tribev2"
+readme = "readme.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy==2.2.6",
+  "pyyaml>=6.0",
+  "pytest>=8.0",
+  "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+runtime = [
+  "tribev2[plotting] @ git+https://github.com/facebookresearch/TRIBEv2.git",
+  "huggingface_hub>=0.26.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "gpu: requires CUDA GPU and tribev2 installation",
+]
