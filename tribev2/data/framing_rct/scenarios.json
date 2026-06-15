@@ -1,0 +1,88 @@
+{
+  "study_id": "kahneman_framing_rct_v1",
+  "title": "Loss vs Gain Framing In-Silico RCT (TRIBE v2)",
+  "design": "within_subjects_crossover",
+  "reference": "Tversky & Kahneman (1981); Kahneman & Tversky (1979) Prospect Theory",
+  "primary_hypothesis": "Loss-framed stimuli produce systematically different cortical activation patterns than objectively equivalent gain-framed stimuli.",
+  "behavioral_benchmark": "Humans show framing effects: risk-averse in gain domain, risk-seeking in loss domain; loss outcomes weigh ~2x gains (loss aversion).",
+  "neural_proxy_metrics": [
+    "mean_abs_activation",
+    "peak_activation",
+    "activation_l2_norm"
+  ],
+  "kahneman_directional_prediction": "loss_frame_mean_abs_activation > gain_frame_mean_abs_activation",
+  "scenarios": [
+    {
+      "scenario_id": "asian_disease",
+      "domain": "health",
+      "objective_summary": "600 people affected by disease; Program A saves 200 for sure vs Program B 1/3 chance to save all 600",
+      "gain_frame": "Imagine that the United States is preparing for the outbreak of an unusual Asian disease, which is expected to kill 600 people. Two alternative programs to combat the disease have been proposed. Program A will save 200 people for certain. Program B has a one-third probability that all 600 people will be saved, and a two-thirds probability that no one will be saved. Which program would you favor?",
+      "loss_frame": "Imagine that the United States is preparing for the outbreak of an unusual Asian disease, which is expected to kill 600 people. Two alternative programs to combat the disease have been proposed. Program C will result in 400 people dying for certain. Program D has a one-third probability that nobody will die, and a two-thirds probability that all 600 people will die. Which program would you favor?",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "lives_surgery",
+      "domain": "health",
+      "objective_summary": "Surgery with identical 90% survival and 10% mortality rates",
+      "gain_frame": "A patient is considering a surgical procedure. The surgeon explains that the operation has a 90 percent success rate, meaning nine out of ten patients recover fully after the surgery. The patient must decide whether to proceed with the operation.",
+      "loss_frame": "A patient is considering a surgical procedure. The surgeon explains that the operation has a 10 percent failure rate, meaning one out of ten patients do not survive the surgery. The patient must decide whether to proceed with the operation.",
+      "behavioral_gain_prediction": "more_likely_to_accept",
+      "behavioral_loss_prediction": "more_likely_to_reject"
+    },
+    {
+      "scenario_id": "money_wallet",
+      "domain": "financial",
+      "objective_summary": "Starting with $30, ending with $20 after a fee",
+      "gain_frame": "You have been given $30 in cash. You must choose between two options. Option A lets you keep $20 for sure. Option B is a gamble with a fifty-fifty chance to keep all $30 or keep only $10. Which option do you choose?",
+      "loss_frame": "You have been given $30 in cash. You must choose between two options. Option A means you will lose $10 for sure, leaving you with $20. Option B is a gamble with a fifty-fifty chance to lose nothing and keep $30, or lose $20 and keep only $10. Which option do you choose?",
+      "behavioral_gain_prediction": "risk_averse_certain_option",
+      "behavioral_loss_prediction": "risk_seeking_gamble_option"
+    },
+    {
+      "scenario_id": "credit_card_fee",
+      "domain": "financial",
+      "objective_summary": "Equivalent cash vs card pricing with $1 difference",
+      "gain_frame": "A store advertises that customers who pay with cash will receive a $1 discount compared to the standard price charged to credit card users. You are deciding whether to pay with cash or card for an item priced at $20 by card.",
+      "loss_frame": "A store advertises that customers who pay with a credit card will be charged a $1 surcharge compared to the lower cash price. You are deciding whether to pay with cash or card for an item priced at $19 by cash.",
+      "behavioral_gain_prediction": "more_cash_preference_when_discount",
+      "behavioral_loss_prediction": "more_cash_preference_when_surcharge"
+    },
+    {
+      "scenario_id": "employment_rate",
+      "domain": "economic",
+      "objective_summary": "20% unemployment equals 80% employment",
+      "gain_frame": "An economic report states that a new policy will help ensure that 80 percent of workers in the region keep their current jobs over the next year. Lawmakers are debating whether to adopt the policy.",
+      "loss_frame": "An economic report states that a new policy still means 20 percent of workers in the region will lose their current jobs over the next year. Lawmakers are debating whether to adopt the policy.",
+      "behavioral_gain_prediction": "more_policy_support",
+      "behavioral_loss_prediction": "less_policy_support"
+    },
+    {
+      "scenario_id": "beef_content",
+      "domain": "consumer",
+      "objective_summary": "75% lean equals 25% fat",
+      "gain_frame": "A grocery label describes ground beef as 75 percent lean meat. Shoppers are deciding whether the product seems healthy enough to buy for dinner tonight.",
+      "loss_frame": "A grocery label describes ground beef as 25 percent fat. Shoppers are deciding whether the product seems healthy enough to buy for dinner tonight.",
+      "behavioral_gain_prediction": "more_positive_evaluation",
+      "behavioral_loss_prediction": "more_negative_evaluation"
+    },
+    {
+      "scenario_id": "exam_score",
+      "domain": "education",
+      "objective_summary": "60% correct equals 40% incorrect on an exam",
+      "gain_frame": "A student receives exam results showing they answered 60 percent of the questions correctly. The student reviews the score to decide how to prepare for the next exam.",
+      "loss_frame": "A student receives exam results showing they answered 40 percent of the questions incorrectly. The student reviews the score to decide how to prepare for the next exam.",
+      "behavioral_gain_prediction": "more_confidence",
+      "behavioral_loss_prediction": "less_confidence"
+    },
+    {
+      "scenario_id": "vaccine_side_effects",
+      "domain": "health",
+      "objective_summary": "95% no side effects equals 5% mild side effects",
+      "gain_frame": "A public health clinic explains that a vaccine has been shown to have no serious side effects in 95 percent of recipients. A person is deciding whether to schedule the vaccination appointment.",
+      "loss_frame": "A public health clinic explains that a vaccine has been shown to cause mild side effects in 5 percent of recipients. A person is deciding whether to schedule the vaccination appointment.",
+      "behavioral_gain_prediction": "more_uptake",
+      "behavioral_loss_prediction": "less_uptake"
+    }
+  ]
+}

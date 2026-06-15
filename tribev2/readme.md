@@ -44,8 +44,10 @@ tribev2/
 ├── scripts/
 │   ├── setup.sh                 # Virtualenv + dependency install
 │   ├── check_environment.py     # GPU / package / HF token checks
-│   └── run_capabilities.py      # Main benchmark runner
-├── tests/test_harness.py        # Unit tests (no GPU required)
+│   ├── run_capabilities.py      # Main benchmark runner
+│   └── run_framing_rct.py       # Kahneman framing RCT generator + analysis
+├── data/framing_rct/            # RCT dataset (assignments, stimuli, protocol)
+├── tests/                       # Unit tests (no GPU required)
 └── outputs/reports/             # JSON capability reports (generated)
 ```
 
@@ -56,6 +58,38 @@ tribev2/
 1. **Environment audit** — Python, CUDA, VRAM, NumPy, Hugging Face token
 2. **Language vs visual contrast** — Two text stimuli through the model; reports activation contrast statistics
 3. **Optional modality tests** — Enable audio/video in `config/default.yaml` after adding media files under `stimuli/`
+
+## Kahneman loss/gain framing RCT
+
+A pre-registered RCT dataset tests whether TRIBE v2 cortical predictions show the same **loss vs gain framing asymmetry** documented by Kahneman and Tversky (1981).
+
+| Property | Value |
+|----------|-------|
+| Design | Within-subjects crossover (one frame per scenario per subject) |
+| Subjects | 60 |
+| Scenarios | 8 matched gain/loss pairs (health, financial, economic, …) |
+| Trials | 480 randomized assignments |
+| Analysis | Paired gain vs loss cortical magnitude per scenario |
+
+```bash
+# Generate or refresh the RCT dataset (CPU only)
+python scripts/run_framing_rct.py --generate-only
+
+# Run TRIBE inference + paired statistics on GPU
+export HF_TOKEN=<token>
+python scripts/run_framing_rct.py --preload-llama
+```
+
+Dataset files live in [`data/framing_rct/`](data/framing_rct/README.md):
+
+- `assignments.csv` — 480 trial-level RCT assignments
+- `unique_stimuli.csv` — 16 gain/loss stimuli for model inference
+- `protocol.json` — study metadata and hypotheses
+- `stimuli/*.txt` — one file per unique stimulus
+
+The analysis tests whether **loss-framed** wording produces stronger mean absolute cortical activation than objectively equivalent **gain-framed** wording, matching the directional salience predicted by prospect theory.
+
+Results are saved to `outputs/reports/framing_rct_analysis.json`.
 
 Example report fields:
 

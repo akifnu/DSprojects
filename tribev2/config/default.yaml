@@ -35,3 +35,10 @@ benchmarks:
 
 reporting:
   output_dir: ./outputs/reports
+
+framing_rct:
+  enabled: true
+  protocol: data/framing_rct/scenarios.json
+  output_dir: data/framing_rct
+  n_subjects: 60
+  random_seed: 42
