@@ -1,0 +1,30 @@
+# Model weights and feature caches
+cache/
+*.ckpt
+*.safetensors
+
+# HuggingFace downloads
+.huggingface/
+
+# Test outputs
+outputs/
+reports/
+*.npy
+*.npz
+*.html
+*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db

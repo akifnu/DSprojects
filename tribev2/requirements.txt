@@ -1,0 +1,8 @@
+# Core harness (always installed)
+numpy==2.2.6
+pyyaml>=6.0
+pytest>=8.0
+
+# TRIBE v2 runtime (GPU machine)
+tribev2[plotting] @ git+https://github.com/facebookresearch/TRIBEv2.git
+huggingface_hub>=0.26.0
