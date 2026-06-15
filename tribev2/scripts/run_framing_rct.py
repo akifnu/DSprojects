@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import sys
 from pathlib import Path
 
@@ -15,8 +15,6 @@ from tribe_capabilities.config import TribeCapabilitiesConfig
 from tribe_capabilities.environment import check_environment
 from tribe_capabilities.framing_rct import (
     analyze_framing_predictions,
-    export_rct_dataset,
-    generate_rct_assignments,
     load_scenarios,
     load_study_metadata,
     run_insilico_framing_experiment,
@@ -27,57 +25,33 @@ from tribe_capabilities.inference import load_model, predict_from_text, preload_
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate and run a Kahneman loss/gain framing RCT with TRIBE v2."
+        description="Run Kahneman loss/gain framing RCT inference with TRIBE v2 (text only)."
     )
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--protocol", type=Path, default=ROOT / "data/framing_rct/scenarios.json")
-    parser.add_argument("--output-dir", type=Path, default=ROOT / "data/framing_rct")
-    parser.add_argument("--n-subjects", type=int, default=60)
+    parser.add_argument("--n-subjects", type=int, default=200)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--generate-only", action="store_true", help="Only build RCT dataset files.")
     parser.add_argument("--preload-llama", action="store_true")
-    parser.add_argument("--skip-gpu", action="store_true")
+    parser.add_argument("--device", default="auto")
     parser.add_argument(
         "--max-scenarios",
         type=int,
         default=None,
-        help="Limit inference to the first N scenarios (useful for GPU smoke tests).",
+        help="Limit inference to first N scenario pairs (use in Colab for smoke tests).",
     )
     args = parser.parse_args()
+
+    if not args.protocol.exists():
+        print(f"Missing {args.protocol}. Run: python scripts/generate_rct_dataset.py", file=sys.stderr)
+        return 1
 
     config = TribeCapabilitiesConfig.load(args.config)
     scenarios = load_scenarios(args.protocol)
     metadata = load_study_metadata(args.protocol)
-    assignments = generate_rct_assignments(
-        scenarios,
-        n_subjects=args.n_subjects,
-        seed=args.seed,
-    )
-    paths = export_rct_dataset(
-        scenarios,
-        assignments,
-        args.output_dir,
-        study_metadata=metadata,
-        seed=args.seed,
-        n_subjects=args.n_subjects,
-    )
 
-    print("RCT dataset generated")
-    print("-" * 32)
-    for name, path in paths.items():
-        if path.is_file():
-            print(f"{name}: {path}")
-
-    if args.generate_only:
-        return 0
-
-    env = check_environment(min_vram_gb=config.min_vram_gb, require_tribev2=not args.skip_gpu)
-    if args.skip_gpu or not env.cuda_available:
-        print("\nSkipping TRIBE inference (no GPU). Dataset is ready for GPU run.")
-        return 0
-
+    env = check_environment(min_vram_gb=config.min_vram_gb, require_tribev2=True)
     if not env.tribev2_importable:
-        print("tribev2 is not installed. Run scripts/setup.sh first.", file=sys.stderr)
+        print("Install tribev2 first: pip install -r requirements.txt", file=sys.stderr)
         return 1
 
     if args.preload_llama:
@@ -85,14 +59,15 @@ def main() -> int:
 
     if args.max_scenarios is not None:
         scenarios = scenarios[: args.max_scenarios]
-        print(f"Limited to {len(scenarios)} scenario(s) for smoke testing.")
+        print(f"Running inference on {len(scenarios)} / {metadata.get('n_scenarios', '?')} scenario pairs")
 
-    model = load_model(config)
+    os.environ["TRIBE_DEVICE"] = args.device
+    model = load_model(config, device=args.device)
     predictions = run_insilico_framing_experiment(
         model,
         scenarios,
         peak_timestep=config.visualization_timestep,
-        predict_fn=lambda _model, text: predict_from_text(_model, text),
+        predict_fn=lambda model, text: predict_from_text(model, text),
     )
 
     analysis = analyze_framing_predictions(
@@ -106,12 +81,8 @@ def main() -> int:
         config.report_output_dir / "framing_rct_analysis.json",
     )
 
-    print("\nFraming RCT analysis")
-    print("-" * 32)
     print(analysis.kahneman_alignment["interpretation"])
-    print(f"\nPrimary p-value: {analysis.kahneman_alignment['primary_p_value_two_sided']:.4f}")
-    print(f"Cohen's dz: {analysis.kahneman_alignment['primary_cohens_dz']:.3f}")
-    print(f"Aligned scenarios: {analysis.kahneman_alignment['scenarios_with_loss_greater_than_gain']}/{analysis.n_scenarios}")
+    print(f"p = {analysis.kahneman_alignment['primary_p_value_two_sided']:.4f}")
     print(f"Report: {report_path}")
     return 0
 

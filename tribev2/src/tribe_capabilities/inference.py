@@ -29,14 +29,17 @@ def preload_llama_weights(config: TribeCapabilitiesConfig) -> Path:
     return cache_dir
 
 
-def load_model(config: TribeCapabilitiesConfig):
+def load_model(config: TribeCapabilitiesConfig, *, device: str | None = None):
     from tribev2 import TribeModel
 
     configure_huggingface(config)
     config.cache_folder.mkdir(parents=True, exist_ok=True)
+    if device is None:
+        device = os.environ.get("TRIBE_DEVICE", "auto")
     return TribeModel.from_pretrained(
         config.model_checkpoint,
         cache_folder=str(config.cache_folder),
+        device=device,
     )
 
 
