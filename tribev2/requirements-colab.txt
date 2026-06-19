@@ -1,24 +1,13 @@
-# Pinned for Google Colab + TRIBE v2 text inference (LLaMA 3.2)
+# Pinned Colab stack — do not loosen without re-testing on fresh Colab GPU runtime.
 numpy==2.2.6
 torch==2.6.0
 torchvision==0.21.0
 transformers==4.47.1
-accelerate==1.2.1
+accelerate>=0.34.0
 huggingface_hub>=0.26.0
-scipy
-pandas
-scikit-learn
-neuralset==0.0.2
-neuraltrain==0.0.2
-exca==0.5.20
-x_transformers==1.27.20
-einops
-pyyaml
-moviepy>=2.2.1
-gtts
-langdetect
-spacy
-soundfile
-Levenshtein
-julius
-safetensors>=0.4.3
+scipy>=1.11
+pandas>=2.0
+tqdm>=4.66
+pyyaml>=6.0
+einops>=0.7
+tribev2 @ git+https://github.com/facebookresearch/TRIBEv2.git

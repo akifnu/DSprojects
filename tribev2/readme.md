@@ -1,35 +1,34 @@
-# TRIBE v2 — Kahneman Framing RCT (text only)
+# TRIBE v2 — Kahneman Framing RCT
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Framing_RCT_NoSetup.ipynb)
 
-## Massive text RCT
+## Colab quick demo (~10–20 min on A100 after first install)
+
+1. Open [**Framing_RCT_NoSetup.ipynb**](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Framing_RCT_NoSetup.ipynb)
+2. **Runtime → GPU** (A100 40 GB recommended)
+3. Colab secret **`HF_TOKEN`** (Hugging Face read token with LLaMA access)
+4. **Runtime → Run all** (auto-restarts once on first install)
+
+The quick demo runs **3 classic Kahneman pairs (6 texts)** with text-only inference (no audio/gTTS).
+
+## Full RCT dataset (local)
 
 | | |
 |--|--|
-| Scenario pairs | **318** gain/loss texts |
-| Unique texts | **636** |
-| Subjects | **200** |
+| Scenario pairs | **318** |
 | Trial assignments | **63,600** |
-| Input modality | **Text only** (`text_path` → TRIBE v2) |
-
-## Colab
-
-1. Open [**Framing_RCT_NoSetup.ipynb**](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Framing_RCT_NoSetup.ipynb)
-2. Runtime → **A100 GPU** (text inference needs ~40 GB VRAM for LLaMA 3.2)
-3. Accept [LLaMA 3.2 license](https://huggingface.co/meta-llama/Llama-3.2-3B) on Hugging Face
-4. **Run all** — paste your Hugging Face read token when prompted (or set Colab secret `HF_TOKEN`)
-5. Increase `MAX_SCENARIOS` in the notebook toward **318** for the full study
-
-The notebook downloads pinned deps from `requirements-colab.txt` (torch 2.6 + transformers 4.47.1).
-
-If install fails, use **Runtime → Factory reset runtime**, delete `/content/.tribev2_colab_v3` if present, then **Run all** twice.
-
-## Local
 
 ```bash
-python scripts/generate_rct_dataset.py   # rebuild 318-pair dataset
-export HF_TOKEN=<token>
-python scripts/run_framing_rct.py --preload-llama --max-scenarios 12
+cd tribev2
+pip install -r requirements-ci.txt && pip install -e .
+pip install -r requirements-gpu.txt
+export HF_TOKEN=<your-read-token>
+python scripts/run_framing_rct.py --max-scenarios 12 --preload-llama
 ```
 
 Dataset: [`data/framing_rct/`](data/framing_rct/README.md)
+
+## References
+
+- [facebook/tribev2](https://huggingface.co/facebook/tribev2)
+- Tversky & Kahneman (1981), *Science*
