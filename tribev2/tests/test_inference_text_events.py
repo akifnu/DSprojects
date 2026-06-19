@@ -5,7 +5,7 @@ import pytest
 
 from tribe_capabilities.inference import (
     apply_torch_compat_patches,
-    build_text_events,
+    build_text_events_fast,
     predict_from_text_resilient,
     validate_prediction_shape,
 )
@@ -17,7 +17,7 @@ def _require_neuralset() -> None:
 
 def test_build_text_events_has_words_and_context() -> None:
     _require_neuralset()
-    events = build_text_events("Program A will save 200 people.")
+    events = build_text_events_fast("Program A will save 200 people.")
     assert (events["type"] == "Word").any()
     assert (events["type"] == "Text").any()
     word_rows = events[events["type"] == "Word"]
@@ -28,7 +28,7 @@ def test_build_text_events_has_words_and_context() -> None:
 def test_build_text_events_rejects_empty_text() -> None:
     _require_neuralset()
     with pytest.raises(ValueError, match="empty"):
-        build_text_events("   ")
+        build_text_events_fast("   ")
 
 
 def test_torch_compat_patch_is_idempotent() -> None:
@@ -39,7 +39,7 @@ def test_torch_compat_patch_is_idempotent() -> None:
 def test_predict_from_text_resilient_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = {"n": 0}
 
-    def flaky_predict(_model, _text: str) -> np.ndarray:
+    def flaky_predict(_model, _text: str, *, timeline: str = "default") -> np.ndarray:
         calls["n"] += 1
         if calls["n"] < 2:
             raise RuntimeError("simulated OOM")

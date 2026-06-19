@@ -1,0 +1,21 @@
+model:
+  checkpoint: facebook/tribev2
+  cache_folder: ./cache
+
+hardware:
+  min_vram_gb: 15
+  recommended_vram_gb: 40
+
+huggingface:
+  llama_repo: meta-llama/Llama-3.2-3B
+  download_timeout_seconds: 600
+
+inference:
+  visualization_timestep: 5
+  expected_vertices: 20484
+  vertices_per_hemisphere: 10242
+
+reporting:
+  output_dir: ./outputs/reports
+
+benchmarks: {}

@@ -2,32 +2,27 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/akifnu/DSprojects/blob/main/tribev2/notebooks/Kahneman_Framing_RCT.ipynb)
 
-## Colab (crash-proof, text-only)
+## Colab quick demo (~10–20 min on A100 after first install)
 
 1. Open the notebook link above
-2. **Runtime → Change runtime type → GPU** (A100 40 GB recommended)
-3. Add Colab secret **`HF_TOKEN`** with your Hugging Face read token (LLaMA 3.2 access), or paste when prompted
-4. **Runtime → Run all** — first run installs pinned deps and restarts once
+2. **Runtime → GPU** (A100 40 GB recommended)
+3. Colab secret **`HF_TOKEN`** (Hugging Face read token)
+4. **Runtime → Run all** (auto-restarts once on first run)
 
-The notebook:
+The quick demo runs **3 classic Kahneman pairs (6 texts)** with:
 
-- Uses **direct text → word events** (no audio, no gTTS)
-- Pins `numpy`, `torch`, and `transformers` versions known to work on Colab
-- **Checkpoints** each prediction to `/content/framing_rct_checkpoint.json` so you can resume after a crash
-- Retries transient CUDA/OOM errors up to 3 times per stimulus
-
-Start with `MAX_SCENARIOS = 6`; raise after a clean run.
+- **Text-only path** — no audio, no gTTS, no 400 MB spaCy download
+- **Text-only model load** — skips loading audio/video encoders (less VRAM, faster)
+- **Batched inference** — all pending texts in one forward pass when possible
+- **Checkpoint resume** — `/content/framing_rct_checkpoint.json`
 
 ## Full RCT dataset (optional, local)
-
-The repo also contains a **318-pair / 63,600-trial** text RCT for offline research:
 
 ```bash
 cd tribev2
 pip install -r requirements-ci.txt && pip install -e .
 pip install -r requirements-gpu.txt
 export HF_TOKEN=<your-read-token>
-python scripts/generate_rct_dataset.py
 python scripts/run_framing_rct.py --max-scenarios 12 --preload-llama
 ```
 
