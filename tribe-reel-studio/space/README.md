@@ -10,6 +10,13 @@ app_file: app.py
 pinned: false
 license: cc-by-nc-4.0
 short_description: Upload a reel or photo, see the predicted brain response
+# Downloaded once at build time instead of on every wake-up. LLaMA 3.2 is gated, which
+# build-time preloading doesn't support, so app.py fetches it in the background at startup.
+preload_from_hub:
+  - facebook/tribev2 config.yaml,best.ckpt
+  - facebook/vjepa2-vitg-fpc64-256
+  - facebook/w2v-bert-2.0
+  - mobiuslabsgmbh/faster-whisper-large-v3-turbo
 ---
 
 # TRIBE v2 Reel Studio

@@ -107,29 +107,47 @@ def extract_frames(video: Path, times: list[float], out_dir: Path, height=360) -
 # ----------------------------------------------------------------------
 
 
-def patch_whisperx_for_cpu():
-    """TRIBE calls WhisperX with float16, which CTranslate2 can't run on CPU: use int8."""
-    import subprocess as sp
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3-turbo")
+WHISPER_LANG = dict(english="en", french="fr", spanish="es", dutch="nl", chinese="zh")
+_WHISPER = None
 
-    from tribev2.eventstransforms import ExtractWordsFromAudio
 
-    original = ExtractWordsFromAudio._get_transcript_from_audio
+def transcribe_words(wav_filename, language: str) -> pd.DataFrame:
+    """Drop-in for TRIBE's WhisperX step: faster-whisper in-process, with the same output
+    columns. TRIBE runs WhisperX large-v3 through `uvx`, which rebuilds a separate
+    environment on every container start; this skips that and uses the faster turbo model."""
+    global _WHISPER
+    import torch
+    from faster_whisper import WhisperModel
 
-    def cpu_safe(wav_filename, language):
-        real_run = sp.run
+    if language not in WHISPER_LANG:
+        raise ValueError(f"Language {language} not supported")
+    if _WHISPER is None:
+        cuda = torch.cuda.is_available()
+        _WHISPER = WhisperModel(WHISPER_MODEL, device="cuda" if cuda else "cpu",
+                                compute_type="float16" if cuda else "int8")
+    segments, _ = _WHISPER.transcribe(str(wav_filename), language=WHISPER_LANG[language],
+                                      word_timestamps=True, vad_filter=True)
+    rows = []
+    for i, seg in enumerate(segments):
+        sentence = seg.text.strip().replace('"', "")
+        for w in seg.words or []:
+            rows.append(dict(text=w.word.strip().replace('"', ""), start=w.start,
+                             duration=w.end - w.start, sequence_id=i, sentence=sentence))
+    return pd.DataFrame(rows, columns=["text", "start", "duration", "sequence_id", "sentence"])
 
-        def run(cmd, *a, **k):
-            if isinstance(cmd, list) and "whisperx" in cmd:
-                cmd = ["int8" if c == "float16" else ("4" if c == "16" else c) for c in cmd]
-            return real_run(cmd, *a, **k)
 
-        sp.run = run
-        try:
-            return original(wav_filename, language)
-        finally:
-            sp.run = real_run
+def warm_up():
+    """Fetch LLaMA 3.2 (gated, so it can't be preloaded at build time) and load the models
+    in the background while the UI is already up, so the first upload doesn't wait for it."""
+    try:
+        from huggingface_hub import snapshot_download
 
-    ExtractWordsFromAudio._get_transcript_from_audio = staticmethod(cpu_safe)
+        snapshot_download("meta-llama/Llama-3.2-3B", allow_patterns=["*.json", "*.safetensors"])
+        get_model()
+        logger.info("Warm-up done: models ready.")
+    except Exception:
+        logger.exception("Background warm-up failed; models will load on first analysis")
 
 
 def get_model():
@@ -138,9 +156,11 @@ def get_model():
         import torch
         from tribev2.demo_utils import TribeModel
 
+        from tribev2.eventstransforms import ExtractWordsFromAudio
+
         if not torch.cuda.is_available():
             logger.warning("No CUDA GPU detected: inference will be very slow on CPU.")
-            patch_whisperx_for_cpu()
+        ExtractWordsFromAudio._get_transcript_from_audio = staticmethod(transcribe_words)
         _MODEL = TribeModel.from_pretrained("facebook/tribev2", cache_folder=str(CACHE))
     return _MODEL
 
@@ -423,11 +443,16 @@ def main():
     ap.add_argument("--share", action="store_true", help="create a public gradio.live link")
     ap.add_argument("--port", type=int, default=7860)
     ap.add_argument("--preload", action="store_true", help="load the model before serving")
+    ap.add_argument("--no-warmup", action="store_true", help="skip background model download")
     args = ap.parse_args()
     DEMO = args.demo
     CACHE.mkdir(parents=True, exist_ok=True)
     if args.preload and not DEMO:
         get_model()
+    elif not DEMO and not args.no_warmup:
+        import threading
+
+        threading.Thread(target=warm_up, daemon=True).start()
     build_ui().queue(max_size=8).launch(
         server_name="0.0.0.0", server_port=args.port, share=args.share,
         allowed_paths=[str(CACHE)], show_error=True,

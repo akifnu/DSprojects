@@ -15,7 +15,7 @@ Open `TRIBE_Reel_Studio_Colab.ipynb` in Colab and follow the 4 setup steps at th
 ## Your own GPU machine
 ```bash
 git clone https://github.com/facebookresearch/tribev2 && cd tribev2
-pip install uv && uv pip install -e ".[plotting]" "transformers>=4.46" gradio plotly
+pip install uv && uv pip install -e ".[plotting]" "transformers>=4.46" "faster-whisper>=1.1" "ctranslate2>=4.5" gradio plotly
 huggingface-cli login            # account with access to meta-llama/Llama-3.2-3B
 python reel_app/app.py --preload # then open http://localhost:7860  (add --share for a public link)
 ```

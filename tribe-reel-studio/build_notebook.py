@@ -33,7 +33,7 @@ After that, a 30–60 s reel takes about 2–5 minutes on a T4.
 #@title 1 · Check GPU + install (≈3–5 min)
 !nvidia-smi --query-gpu=name,memory.total --format=csv || echo "⚠️ No GPU: switch the runtime to GPU first!"
 !pip -q install uv
-!uv pip install --system -q "tribev2[plotting] @ git+https://github.com/facebookresearch/tribev2.git" "transformers>=4.46" gradio plotly
+!uv pip install --system -q "tribev2[plotting] @ git+https://github.com/facebookresearch/tribev2.git" "transformers>=4.46" "faster-whisper>=1.1" "ctranslate2>=4.5" gradio plotly
 """),
     code("""
 #@title 2 · Hugging Face login (needed for gated LLaMA 3.2)
