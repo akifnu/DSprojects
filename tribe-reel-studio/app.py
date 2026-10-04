@@ -158,7 +158,13 @@ def get_model():
 
         from tribev2.eventstransforms import ExtractWordsFromAudio
 
-        if not torch.cuda.is_available():
+        if torch.cuda.is_available():
+            # TF32 tensor cores for float32 matmuls/convs: large speedup on Ampere+ GPUs
+            # (L40S, A100), negligible accuracy cost.
+            torch.set_float32_matmul_precision("high")
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        else:
             logger.warning("No CUDA GPU detected: inference will be very slow on CPU.")
         ExtractWordsFromAudio._get_transcript_from_audio = staticmethod(transcribe_words)
         _MODEL = TribeModel.from_pretrained("facebook/tribev2", cache_folder=str(CACHE))
