@@ -449,6 +449,35 @@ def brain_3d_figure(dense: np.ndarray, tr: float, thr: float, vmax: float, diver
     return fig
 
 
+def render_intensity_png(ts: dict, tr: float, peaks: list[int], unreliable_last: bool, path,
+                         title: str = "Predicted brain response"):
+    """Static, downloadable version of the intensity graph (same lines and fixed axis
+    as the brain movie, so graphs of different reels can be put side by side)."""
+    t = np.arange(len(ts["Overall"])) * tr
+    fig, ax = plt.subplots(figsize=(10, 5), dpi=200)
+    for name in ["Overall"] + [n for n in COMPARE_NETWORKS if n in ts]:
+        ax.plot(t, ts[name], color=NETWORK_COLORS.get(name), marker="o", ms=3,
+                lw=3 if name == "Overall" else 1.6, label=name)
+    for rank, i in enumerate(peaks, 1):
+        ax.axvline(i * tr, color="#e4572e", ls=":", lw=1.2)
+        ax.text(i * tr, chart_ylim(ts)[1], f" peak #{rank}", color="#e4572e", fontsize=8,
+                va="top", ha="left")
+    if unreliable_last and len(t) > 1:
+        ax.axvspan(t[-1] - tr / 2, t[-1] + tr / 2, color="#999", alpha=0.25, lw=0,
+                   label="end of clip (less reliable)")
+    ax.set_ylim(*chart_ylim(ts))
+    ax.axhline(0, color="#ccc", lw=0.8, zorder=0)
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("predicted response (a.u.)")
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(fontsize=8, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13), frameon=False)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
 def intensity_figure(ts: dict[str, np.ndarray], tr: float, peaks: list[int],
                      unreliable_last: bool = False):
     import plotly.graph_objects as go

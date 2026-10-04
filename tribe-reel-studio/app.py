@@ -79,6 +79,38 @@ def image_to_video(path: str, seconds: float) -> str:
     return str(out)
 
 
+AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus"}
+
+
+def stage_audio(path: str, start: float = 0, seconds: float = 0) -> Path:
+    """Content-addressed .wav of the requested part of an audio upload."""
+    h = hashlib.sha1()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    suffix = f"_from{start:g}s_{seconds:g}s" if start > 0 or seconds > 0 else ""
+    dst = CACHE / "uploads" / f"audio_{h.hexdigest()[:16]}{suffix}.wav"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if not dst.exists():
+        cut = (["-ss", f"{start:g}"] if start > 0 else []) + (["-t", f"{seconds:g}"] if seconds > 0 else [])
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *cut, "-i", path, "-vn",
+                        "-acodec", "pcm_s16le", str(dst)], check=True)
+    return dst
+
+
+def audio_display_video(wav: Path) -> Path:
+    """Waveform video of an audio clip, used only for the brain movie and key moments
+    (the model itself gets the audio alone)."""
+    dst = wav.with_suffix(".display.mp4")
+    if not dst.exists():
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-filter_complex",
+                        "[0:a]showwaves=s=720x1280:mode=cline:scale=sqrt:draw=full:rate=25:colors=0x60a5fa,"
+                        "format=yuv420p[v]",
+                        "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-c:a", "aac", "-shortest",
+                        str(dst)], check=True)
+    return dst
+
+
 def stage_upload(path: str, start: float = 0, seconds: float = 0) -> Path:
     """Copy the upload to a stable, content-addressed .mp4 so features get cached
     and re-analysing the same reel is fast. Non-mp4 inputs are transcoded.
@@ -185,19 +217,19 @@ def get_model():
     return _MODEL
 
 
-def build_events(video: Path, language: str) -> tuple[pd.DataFrame, str]:
+def build_events(media: Path, language: str, kind: str = "Video") -> tuple[pd.DataFrame, str]:
     """Same pipeline as TribeModel.get_events_dataframe, with a language choice and
-    a fallback for reels without intelligible speech (music-only, etc.)."""
+    a fallback for reels without intelligible speech (music-only, etc.).
+    kind is "Video" or "Audio" (audio-only input, as TRIBE supports natively)."""
     from neuralset.events.transforms import (AddContextToWords, AddSentenceToWords, AddText,
                                              ChunkEvents, ExtractAudioFromVideo, RemoveMissing)
     from neuralset.events.utils import standardize_events
     from tribev2.eventstransforms import ExtractWordsFromAudio
 
-    base = [
-        ExtractAudioFromVideo(),
-        ChunkEvents(event_type_to_chunk="Audio", max_duration=60, min_duration=30),
-        ChunkEvents(event_type_to_chunk="Video", max_duration=60, min_duration=30),
-    ]
+    base = [ChunkEvents(event_type_to_chunk="Audio", max_duration=60, min_duration=30)]
+    if kind == "Video":
+        base = [ExtractAudioFromVideo(), *base,
+                ChunkEvents(event_type_to_chunk="Video", max_duration=60, min_duration=30)]
     text = [
         ExtractWordsFromAudio(language=language),
         AddText(),
@@ -205,7 +237,7 @@ def build_events(video: Path, language: str) -> tuple[pd.DataFrame, str]:
         AddContextToWords(sentence_only=False, max_context_len=1024, split_field=""),
         RemoveMissing(),
     ]
-    event = {"type": "Video", "filepath": str(video), "start": 0,
+    event = {"type": kind, "filepath": str(media), "start": 0,
              "timeline": "default", "subject": "default"}
 
     def run(transforms):
@@ -219,18 +251,19 @@ def build_events(video: Path, language: str) -> tuple[pd.DataFrame, str]:
         n_words = int((events.type == "Word").sum())
         if n_words:
             return events, f"Transcribed {n_words} words ({language})."
-        note = "No speech detected: using video + audio only."
+        note = f"No speech detected: using {kind.lower()} features only."
     except Exception as e:  # e.g. music-only reel, transcription failure
         logger.exception("Transcription stage failed")
-        note = f"Speech transcription failed ({type(e).__name__}); using video + audio only."
+        note = f"Speech transcription failed ({type(e).__name__}); using {kind.lower()} features only."
     return run(base), note
 
 
-def predict_tribe(video: Path, language: str, progress) -> tuple[np.ndarray, list[float], float, str]:
+def predict_tribe(media: Path, language: str, progress,
+                  kind: str = "Video") -> tuple[np.ndarray, list[float], float, str]:
     progress(0.05, desc="Loading TRIBE v2 (first run downloads weights)…")
     model = get_model()
     progress(0.15, desc="Extracting audio + transcribing speech…")
-    events, note = build_events(video, language)
+    events, note = build_events(media, language, kind)
     progress(0.3, desc="Extracting V-JEPA2 / Wav2Vec-BERT / LLaMA features + predicting…")
     preds, segments = model.predict(events=events, verbose=True)
     starts = [float(s.start) for s in segments]
@@ -319,29 +352,38 @@ def make_moments(video: Path, dense, ts, peaks, tr, thr, vmax, diverging, out_di
     return gallery
 
 
-def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, language, colormap,
-            threshold_pct, scale_max, make_movie, progress=gr.Progress()):
-    if not video_path and image_path:
+def analyze(video_path, audio_path, image_path, image_seconds, clip_start, clip_seconds, language,
+            colormap, threshold_pct, scale_max, make_movie, progress=gr.Progress()):
+    kind = "Video"
+    if not video_path and audio_path:
+        kind = "Audio"
+    elif not video_path and image_path:
         # Render the photo a bit longer than asked and analyse only the asked seconds.
         video_path = image_to_video(image_path, image_seconds + EDGE_PAD_S)
         clip_start, clip_seconds = 0, image_seconds
-    if not video_path:
-        raise gr.Error("Upload a reel or a photo first.")
+    if not video_path and kind == "Video":
+        raise gr.Error("Upload a reel, an audio file or a photo first.")
     t0 = time.time()
-    progress(0.01, desc="Preparing video…")
+    progress(0.01, desc="Preparing upload…")
     clip_start, clip_seconds = float(clip_start or 0), float(clip_seconds or 0)
-    if clip_start > 0 and clip_start >= probe_duration(video_path):
-        raise gr.Error(f"'Start at' ({clip_start:g}s) is past the end of the video.")
-    video = stage_upload(video_path, clip_start, clip_seconds + EDGE_PAD_S if clip_seconds else 0)
-    duration = probe_duration(str(video))
+    source = audio_path if kind == "Audio" else video_path
+    if clip_start > 0 and clip_start >= probe_duration(source):
+        raise gr.Error(f"'Start at' ({clip_start:g}s) is past the end of the {kind.lower()}.")
+    padded = clip_seconds + EDGE_PAD_S if clip_seconds else 0
+    if kind == "Audio":
+        media = stage_audio(source, clip_start, padded)
+        video = audio_display_video(media)  # for display only
+    else:
+        media = video = stage_upload(source, clip_start, padded)
+    duration = probe_duration(str(media))
     keep_s = min(clip_seconds, duration) if clip_seconds else duration
     if duration > 300:
         raise gr.Error(f"Video is {duration:.0f}s long; please keep it under 5 minutes.")
 
     if DEMO:
-        preds, starts, tr, note = predict_demo(video, duration)
+        preds, starts, tr, note = predict_demo(media, duration)
     else:
-        preds, starts, tr, note = predict_tribe(video, language, progress)
+        preds, starts, tr, note = predict_tribe(media, language, progress, kind)
 
     progress(0.55, desc="Summarizing…")
     diverging = colormap.startswith("Activation & suppression")
@@ -360,7 +402,7 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
     thr = vmax * threshold_pct / (200 if diverging else 100)
     mean_map = np.nanmean(dense, axis=0)
 
-    out_dir = OUT_ROOT / f"{video.stem}_{int(time.time())}"
+    out_dir = OUT_ROOT / f"{media.stem}_{int(time.time())}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     avg_png = bv.render_static(bv.BrainRenderer(), mean_map, thr, vmax, diverging,
@@ -374,6 +416,12 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
     viewer = (f'<iframe src="/gradio_api/file={html_3d}" style="width:100%;height:680px;border:0" '
               f'title="Interactive 3D brain"></iframe>')
     fig_int = bv.intensity_figure(ts, tr, peaks, unreliable_last)
+    # Downloadable copies of the intensity graph: a static PNG and the interactive page.
+    graph_png = bv.render_intensity_png(ts, tr, peaks, unreliable_last, out_dir / "intensity_graph.png",
+                                        title=f"Predicted brain response · {Path(source).name}")
+    graph_html = out_dir / "intensity_graph.html"
+    fig_int.write_html(str(graph_html), include_plotlyjs="cdn")
+    graph_files = [str(graph_png), str(graph_html)]
 
     movie = None
     if make_movie:
@@ -386,8 +434,9 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
     ts_df = pd.DataFrame({"time_s": np.arange(len(dense)) * tr, **ts})
     ts_df.to_csv(out_dir / "intensity_timeseries.csv", index=False)
     table.to_csv(out_dir / "network_summary.csv", index=False)
-    files = [str(out_dir / f) for f in ("intensity_timeseries.csv", "network_summary.csv",
-                                        "predictions_fsaverage5.npy", "brain_3d_interactive.html")]
+    files = graph_files + [str(out_dir / f) for f in (
+        "intensity_timeseries.csv", "network_summary.csv", "predictions_fsaverage5.npy",
+        "brain_3d_interactive.html")]
     if movie:
         files.insert(0, str(movie))
 
@@ -397,7 +446,7 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
               f"Colour scale max: {vmax:g} (this reel's own 99th percentile: {own_p99:.2f}). "
               f"Keep the scale the same when comparing reels.")
     if unreliable_last:
-        status += ("  \n⚠️ No footage after the last second, so it's less reliable: it is shaded "
+        status += ("  \n⚠️ Nothing comes after the last second, so it's less reliable: it is shaded "
                    "and left out of peaks and the summary.")
     elif clip_seconds:
         status += f"  \n{EDGE_PAD_S:g} extra seconds were analysed past the clip and discarded."
@@ -405,7 +454,10 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
         status += "  \n⚠️ Destrieux atlas unavailable (no internet?), so network breakdown is disabled."
     if DEMO:
         status = "### ⚠️ DEMO MODE: synthetic data, NOT real TRIBE v2 predictions\n" + status
-    return (status, str(movie) if movie else None, viewer, fig_int, avg_png, gallery, table, files)
+    if kind == "Audio":
+        status += "  \nAudio only: the model got just the sound (the waveform is only for display)."
+    return (status, str(movie) if movie else None, viewer, fig_int, graph_files, avg_png, gallery,
+            table, files)
 
 
 # ----------------------------------------------------------------------
@@ -440,13 +492,17 @@ def build_ui() -> gr.Blocks:
         with gr.Row():
             with gr.Column(scale=1, min_width=320):
                 video_in = gr.Video(label="Your reel (.mp4 / .mov / .webm)", sources=["upload"], height=480)
-                with gr.Row():
-                    clip_start = gr.Number(value=0, minimum=0, label="Start at (s)")
-                    clip_seconds = gr.Number(value=0, minimum=0,
-                                             label="Seconds to analyze (0 = whole video)")
                 with gr.Accordion("…or analyze a photo", open=False):
                     image_in = gr.Image(label="Photo (shown as a still clip)", type="filepath", sources=["upload"])
                     image_seconds = gr.Slider(5, 30, value=10, step=1, label="Show the photo for (s)")
+                with gr.Accordion("…or analyze an audio file", open=False):
+                    audio_in = gr.Audio(label="Audio (.mp3 / .wav / .m4a …)", type="filepath",
+                                        sources=["upload"])
+                gr.Markdown("**Length** (for a video or audio file)")
+                with gr.Row():
+                    clip_start = gr.Number(value=0, minimum=0, label="Start at (s)")
+                    clip_seconds = gr.Number(value=0, minimum=0,
+                                             label="Seconds to analyze (0 = all)")
                 language = gr.Dropdown(LANGUAGES, value="english", label="Spoken language in the reel")
                 with gr.Accordion("Display options", open=False):
                     colormap = gr.Radio(["Activation only (hot)", "Activation & suppression (blue/red)"],
@@ -469,6 +525,8 @@ def build_ui() -> gr.Blocks:
                         plot3d = gr.HTML()
                     with gr.Tab("📈 Intensity"):
                         intensity = gr.Plot(label="Intensity over time")
+                        graph_dl = gr.File(label="Download this graph (PNG image + interactive HTML)",
+                                           file_count="multiple")
                         table = gr.Dataframe(label="Per-network summary", interactive=False, wrap=True)
                     with gr.Tab("⭐ Key moments"):
                         avg_img = gr.Image(label="Average activation", type="filepath")
@@ -477,8 +535,8 @@ def build_ui() -> gr.Blocks:
                         files = gr.File(label="Results", file_count="multiple")
         run_btn.click(
             analyze,
-            inputs=[video_in, image_in, image_seconds, clip_start, clip_seconds, language, colormap, threshold, scale_max, make_movie],
-            outputs=[status, movie_out, plot3d, intensity, avg_img, gallery, table, files],
+            inputs=[video_in, audio_in, image_in, image_seconds, clip_start, clip_seconds, language, colormap, threshold, scale_max, make_movie],
+            outputs=[status, movie_out, plot3d, intensity, graph_dl, avg_img, gallery, table, files],
         )
     return demo
 

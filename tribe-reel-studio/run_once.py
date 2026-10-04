@@ -23,10 +23,13 @@ args = ap.parse_args()
 app.DEMO = args.demo
 app.CACHE.mkdir(parents=True, exist_ok=True)
 
-is_image = Path(args.path).suffix.lower() in app.IMAGE_SUFFIXES
-out = app.analyze(None if is_image else args.path, args.path if is_image else None, args.seconds,
+suffix = Path(args.path).suffix.lower()
+is_image, is_audio = suffix in app.IMAGE_SUFFIXES, suffix in app.AUDIO_SUFFIXES
+is_video = not (is_image or is_audio)
+out = app.analyze(args.path if is_video else None, args.path if is_audio else None,
+                  args.path if is_image else None, args.seconds,
                   args.start, args.clip, args.language, "Activation only (hot)", 55, args.scale, True,
                   progress=lambda frac, desc="": print(f"[{frac:4.0%}] {desc}", flush=True))
 print(out[0])
-print(out[6].to_string(index=False))
-print("\n".join(out[7]))
+print(out[7].to_string(index=False))
+print("\n".join(out[8]))

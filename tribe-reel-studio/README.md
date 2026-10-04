@@ -1,9 +1,12 @@
 # TRIBE v2 Reel Studio
 
-Upload a reel and see TRIBE v2's predicted brain response:
+Upload a reel, an audio file or a photo and see TRIBE v2's predicted brain response.
+Use **Start at** / **Seconds to analyze** to analyze only part of a video or audio file
+(2 extra seconds are analyzed past the cut and discarded, so the last second stays reliable).
+Keep **Color scale max** the same when comparing reels; charts always show the same lines on a fixed axis.
 - **Brain movie**: your reel side by side with 4 cortical views, updated every second, with an intensity timeline cursor (audio kept).
 - **3D brain**: an interactive cortex you can rotate, with a time slider, Play button and Left/Right/Top/Front/Back presets.
-- **Intensity**: response over time for the whole cortex and 9 brain systems (Visual, Faces & objects, Auditory, Language,
+- **Intensity**: downloadable graph (PNG + interactive HTML) of the response over time for the whole cortex and 9 brain systems (Visual, Faces & objects, Auditory, Language,
   Attention, Motor & touch, Prefrontal, Emotion & reward, Default mode), plus a per-system summary table.
 - **Key moments**: the 3 peak seconds (frame + brain map) and the average activation map.
 - **Downloads**: brain movie MP4, intensity CSV, network summary CSV, raw predictions (`.npy`, T × 20484 fsaverage5), and the standalone 3D HTML.
