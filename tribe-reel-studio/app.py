@@ -107,6 +107,31 @@ def extract_frames(video: Path, times: list[float], out_dir: Path, height=360) -
 # ----------------------------------------------------------------------
 
 
+def patch_whisperx_for_cpu():
+    """TRIBE calls WhisperX with float16, which CTranslate2 can't run on CPU: use int8."""
+    import subprocess as sp
+
+    from tribev2.eventstransforms import ExtractWordsFromAudio
+
+    original = ExtractWordsFromAudio._get_transcript_from_audio
+
+    def cpu_safe(wav_filename, language):
+        real_run = sp.run
+
+        def run(cmd, *a, **k):
+            if isinstance(cmd, list) and "whisperx" in cmd:
+                cmd = ["int8" if c == "float16" else ("4" if c == "16" else c) for c in cmd]
+            return real_run(cmd, *a, **k)
+
+        sp.run = run
+        try:
+            return original(wav_filename, language)
+        finally:
+            sp.run = real_run
+
+    ExtractWordsFromAudio._get_transcript_from_audio = staticmethod(cpu_safe)
+
+
 def get_model():
     global _MODEL
     if _MODEL is None:
@@ -115,6 +140,7 @@ def get_model():
 
         if not torch.cuda.is_available():
             logger.warning("No CUDA GPU detected: inference will be very slow on CPU.")
+            patch_whisperx_for_cpu()
         _MODEL = TribeModel.from_pretrained("facebook/tribev2", cache_folder=str(CACHE))
     return _MODEL
 
