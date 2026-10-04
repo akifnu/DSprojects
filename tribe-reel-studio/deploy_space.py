@@ -52,6 +52,15 @@ with tempfile.TemporaryDirectory() as tmp:
     except Exception as e:
         fail("Uploading app", e)
 
+hardware = os.environ.get("SPACE_HARDWARE")
+if hardware:
+    # Sleep after 15 idle minutes so the GPU only bills while it's being used.
+    try:
+        api.request_space_hardware(repo_id, hardware, sleep_time=900)
+        print(f"::notice::Space hardware set to {hardware} (sleeps after 15 idle minutes)")
+    except Exception as e:
+        fail(f"Switching hardware to {hardware}", e)
+
 url = f"https://huggingface.co/spaces/{repo_id}"
 print(f"\nApp URL: {url}")
 print(f"::notice::App deployed: {url}")
