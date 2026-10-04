@@ -34,6 +34,12 @@ logger = logging.getLogger("reel_studio")
 
 CACHE = Path(os.environ.get("TRIBE_CACHE", "./cache")).resolve()
 OUT_ROOT = CACHE / "reel_outputs"
+# Fixed colour scale shared by every reel (predicted response, a.u.), so brain maps of
+# different reels mean the same thing. Adjustable in the UI.
+DEFAULT_SCALE_MAX = 0.5
+# Extra seconds analysed past the requested clip and then discarded: the model's last
+# second is unreliable because it has no footage after it.
+EDGE_PAD_S = 2.0
 LANGUAGES = ["english", "french", "spanish", "dutch", "chinese"]
 DEMO = False
 _MODEL = None
@@ -257,9 +263,10 @@ def predict_demo(video: Path, duration: float) -> tuple[np.ndarray, list[float],
 # ----------------------------------------------------------------------
 
 
-def make_brain_movie(video: Path, dense, ts, tr, thr, vmax, diverging, out_dir: Path, progress) -> Path:
+def make_brain_movie(video: Path, dense, ts, tr, thr, vmax, diverging, out_dir: Path, progress,
+                     unreliable_last=False) -> Path:
     renderer = bv.BrainRenderer()
-    anim = bv.PanelAnimator(renderer, ts, tr, thr, vmax, diverging)
+    anim = bv.PanelAnimator(renderer, ts, tr, thr, vmax, diverging, unreliable_last=unreliable_last)
     frames_dir = out_dir / "panels"
     frames_dir.mkdir(parents=True, exist_ok=True)
     from PIL import Image
@@ -278,7 +285,8 @@ def make_brain_movie(video: Path, dense, ts, tr, thr, vmax, diverging, out_dir: 
            "-map", "[v]"]
     if has_audio_stream(str(video)):
         cmd += ["-map", "0:a", "-c:a", "aac"]
-    cmd += ["-c:v", "libx264", "-crf", "20", "-preset", "veryfast", "-shortest",
+    # Cut to the analysed seconds (the staged video may carry discarded padding seconds).
+    cmd += ["-t", f"{len(dense) * tr:g}", "-c:v", "libx264", "-crf", "20", "-preset", "veryfast",
             "-movflags", "+faststart", str(out)]
     subprocess.run(cmd, check=True)
     return out
@@ -312,9 +320,11 @@ def make_moments(video: Path, dense, ts, peaks, tr, thr, vmax, diverging, out_di
 
 
 def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, language, colormap,
-            threshold_pct, make_movie, progress=gr.Progress()):
+            threshold_pct, scale_max, make_movie, progress=gr.Progress()):
     if not video_path and image_path:
-        video_path = image_to_video(image_path, image_seconds)
+        # Render the photo a bit longer than asked and analyse only the asked seconds.
+        video_path = image_to_video(image_path, image_seconds + EDGE_PAD_S)
+        clip_start, clip_seconds = 0, image_seconds
     if not video_path:
         raise gr.Error("Upload a reel or a photo first.")
     t0 = time.time()
@@ -322,8 +332,9 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
     clip_start, clip_seconds = float(clip_start or 0), float(clip_seconds or 0)
     if clip_start > 0 and clip_start >= probe_duration(video_path):
         raise gr.Error(f"'Start at' ({clip_start:g}s) is past the end of the video.")
-    video = stage_upload(video_path, clip_start, clip_seconds)
+    video = stage_upload(video_path, clip_start, clip_seconds + EDGE_PAD_S if clip_seconds else 0)
     duration = probe_duration(str(video))
+    keep_s = min(clip_seconds, duration) if clip_seconds else duration
     if duration > 300:
         raise gr.Error(f"Video is {duration:.0f}s long; please keep it under 5 minutes.")
 
@@ -334,20 +345,25 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
 
     progress(0.55, desc="Summarizing…")
     diverging = colormap.startswith("Activation & suppression")
-    n_steps = int(np.ceil(duration / tr))
-    dense = bv.densify(preds, starts, tr, n_steps=n_steps)
+    n_keep = int(np.ceil(keep_s / tr - 1e-6))
+    dense = bv.densify(preds, starts, tr, n_steps=int(np.ceil(duration / tr)))
+    # The padding seconds only exist to give the kept seconds footage after them.
+    unreliable_last = len(dense) <= n_keep
+    dense = dense[:n_keep]
     masks = bv.load_network_masks()
     ts = bv.network_timeseries(dense, masks)
-    peaks = bv.find_peaks(ts["Overall"], k=3)
-    thr, vmax = bv.vertex_limits(dense, threshold_pct=threshold_pct)
-    if diverging:
-        thr = vmax * threshold_pct / 200  # show more of the signed range
+    # Peaks and the summary table skip an unreliable final second.
+    ts_eval = {k: v[:-1] for k, v in ts.items()} if unreliable_last and n_keep > 1 else ts
+    peaks = bv.find_peaks(ts_eval["Overall"], k=3)
+    _, own_p99 = bv.vertex_limits(dense)
+    vmax = float(scale_max or DEFAULT_SCALE_MAX)
+    thr = vmax * threshold_pct / (200 if diverging else 100)
     mean_map = np.nanmean(dense, axis=0)
 
     out_dir = OUT_ROOT / f"{video.stem}_{int(time.time())}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    avg_png = bv.render_static(bv.BrainRenderer(), bv.rescale_like(mean_map, vmax), thr, vmax, diverging,
+    avg_png = bv.render_static(bv.BrainRenderer(), mean_map, thr, vmax, diverging,
                                "Average predicted activation over the whole reel",
                                str(out_dir / "average_activation.png"))
     gallery = make_moments(video, dense, ts, peaks, tr, thr, vmax, diverging, out_dir)
@@ -357,13 +373,14 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
                      default_height="100%", default_width="100%")
     viewer = (f'<iframe src="/gradio_api/file={html_3d}" style="width:100%;height:680px;border:0" '
               f'title="Interactive 3D brain"></iframe>')
-    fig_int = bv.intensity_figure(ts, tr, peaks)
+    fig_int = bv.intensity_figure(ts, tr, peaks, unreliable_last)
 
     movie = None
     if make_movie:
-        movie = make_brain_movie(video, dense, ts, tr, thr, vmax, diverging, out_dir, progress)
+        movie = make_brain_movie(video, dense, ts, tr, thr, vmax, diverging, out_dir, progress,
+                                 unreliable_last)
 
-    table = pd.DataFrame(bv.summary_table(ts, tr),
+    table = pd.DataFrame(bv.summary_table(ts_eval, tr),
                          columns=["Region / network", "Mean", "Peak", "Peak at (s)", "Top network % of time"])
     np.save(out_dir / "predictions_fsaverage5.npy", dense)
     ts_df = pd.DataFrame({"time_s": np.arange(len(dense)) * tr, **ts})
@@ -375,8 +392,15 @@ def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, lan
         files.insert(0, str(movie))
 
     status = (f"**Done in {time.time() - t0:.0f}s.** {note}  \n"
-              f"{len(preds)} timesteps predicted over a {duration:.1f}s reel (1 step = {tr:g}s; "
-              f"5s hemodynamic lag already compensated).")
+              f"{len(dense)} timesteps over a {keep_s:.1f}s clip (1 step = {tr:g}s; "
+              f"5s hemodynamic lag already compensated).  \n"
+              f"Colour scale max: {vmax:g} (this reel's own 99th percentile: {own_p99:.2f}). "
+              f"Keep the scale the same when comparing reels.")
+    if unreliable_last:
+        status += ("  \n⚠️ No footage after the last second, so it's less reliable: it is shaded "
+                   "and left out of peaks and the summary.")
+    elif clip_seconds:
+        status += f"  \n{EDGE_PAD_S:g} extra seconds were analysed past the clip and discarded."
     if masks is None:
         status += "  \n⚠️ Destrieux atlas unavailable (no internet?), so network breakdown is disabled."
     if DEMO:
@@ -428,7 +452,9 @@ def build_ui() -> gr.Blocks:
                     colormap = gr.Radio(["Activation only (hot)", "Activation & suppression (blue/red)"],
                                         value="Activation only (hot)", label="Color map")
                     threshold = gr.Slider(0, 95, value=55, step=5,
-                                          label="Hide weak responses below (% of peak)")
+                                          label="Hide weak responses below (% of scale max)")
+                    scale_max = gr.Number(value=DEFAULT_SCALE_MAX, minimum=0.01,
+                                          label="Color scale max (keep the same to compare reels)")
                     make_movie = gr.Checkbox(value=True, label="Render side-by-side brain movie")
                 run_btn = gr.Button("🧠 Analyze reel", variant="primary", size="lg")
                 status = gr.Markdown()
@@ -451,7 +477,7 @@ def build_ui() -> gr.Blocks:
                         files = gr.File(label="Results", file_count="multiple")
         run_btn.click(
             analyze,
-            inputs=[video_in, image_in, image_seconds, clip_start, clip_seconds, language, colormap, threshold, make_movie],
+            inputs=[video_in, image_in, image_seconds, clip_start, clip_seconds, language, colormap, threshold, scale_max, make_movie],
             outputs=[status, movie_out, plot3d, intensity, avg_img, gallery, table, files],
         )
     return demo

@@ -143,6 +143,20 @@ def load_network_masks() -> dict[str, np.ndarray] | None:
 # ----------------------------------------------------------------------
 
 
+# Same lines and axis on every reel's charts, so different reels can be compared.
+COMPARE_NETWORKS = ["Visual", "Auditory", "Language", "Faces & objects", "Attention"]
+CHART_YLIM = (-0.15, 0.35)
+
+
+def chart_ylim(ts: dict) -> tuple[float, float]:
+    """Fixed y-range, widened only if a reel goes beyond it."""
+    vals = np.concatenate([s[~np.isnan(s)] for s in ts.values()] or [np.zeros(1)])
+    lo, hi = CHART_YLIM
+    if vals.size:
+        lo, hi = min(lo, float(vals.min()) - 0.02), max(hi, float(vals.max()) + 0.02)
+    return lo, hi
+
+
 def densify(preds: np.ndarray, starts: list[float], tr: float, n_steps: int | None = None) -> np.ndarray:
     """Place per-segment predictions on a regular 0, TR, 2TR... grid (NaN where missing)."""
     idx = np.round(np.asarray(starts) / tr).astype(int)
@@ -299,7 +313,7 @@ class PanelAnimator:
     """Per-timestep panel: 4 brain views + intensity timeline with a cursor."""
 
     def __init__(self, renderer: BrainRenderer, ts: dict, tr: float, thr, vmax, diverging,
-                 width_px=640, height_px=720):
+                 width_px=640, height_px=720, unreliable_last=False):
         self.r, self.thr, self.vmax, self.div = renderer, thr, vmax, diverging
         dpi = 100
         self.fig = plt.figure(figsize=(width_px / dpi, height_px / dpi), dpi=dpi, facecolor="white")
@@ -311,10 +325,12 @@ class PanelAnimator:
             self.pcs[view] = renderer.draw(ax, view, None, thr, vmax, diverging)
         ax = self.fig.add_axes([0.1, 0.07, 0.86, 0.22])
         t = np.arange(len(ts["Overall"])) * tr
-        ranked = sorted((n for n in ts if n != "Overall"), key=lambda n: -np.nanmax(ts[n]))[:4]
-        for name in ["Overall"] + ranked:
+        for name in ["Overall"] + [n for n in COMPARE_NETWORKS if n in ts]:
             ax.plot(t, ts[name], color=NETWORK_COLORS.get(name, None),
                     lw=2.2 if name == "Overall" else 1.2, label=name)
+        ax.set_ylim(*chart_ylim(ts))
+        if unreliable_last and len(t) > 1:
+            ax.axvspan(t[-1] - tr / 2, t[-1] + tr / 2, color="#999", alpha=0.25, lw=0)
         ax.legend(fontsize=7, ncol=3, loc="upper left", frameon=False)
         ax.set_xlabel("time (s)", fontsize=8)
         ax.tick_params(labelsize=7)
@@ -378,13 +394,6 @@ CAMERAS = {
 }
 
 
-def rescale_like(values: np.ndarray, vmax: float, percentile: float = 99.0) -> np.ndarray:
-    """Rescale a map (e.g. the time-average, which is weaker than single
-    timesteps) so its own robust maximum matches vmax."""
-    ref = np.nanpercentile(np.abs(values), percentile)
-    return values * (vmax / ref) if ref > 0 else values
-
-
 def brain_3d_figure(dense: np.ndarray, tr: float, thr: float, vmax: float, diverging: bool,
                     mean_map: np.ndarray | None = None):
     import plotly.graph_objects as go
@@ -397,7 +406,7 @@ def brain_3d_figure(dense: np.ndarray, tr: float, thr: float, vmax: float, diver
 
     frames_vals = []
     if mean_map is not None:
-        frames_vals.append(("average", "Average", rescale_like(mean_map, vmax)))
+        frames_vals.append(("average", "Average", mean_map))
     for i in range(len(dense)):
         frames_vals.append((str(i), f"{i * tr:.0f}s", dense[i]))
 
@@ -440,7 +449,8 @@ def brain_3d_figure(dense: np.ndarray, tr: float, thr: float, vmax: float, diver
     return fig
 
 
-def intensity_figure(ts: dict[str, np.ndarray], tr: float, peaks: list[int]):
+def intensity_figure(ts: dict[str, np.ndarray], tr: float, peaks: list[int],
+                     unreliable_last: bool = False):
     import plotly.graph_objects as go
 
     fig = go.Figure()
@@ -449,8 +459,12 @@ def intensity_figure(ts: dict[str, np.ndarray], tr: float, peaks: list[int]):
         fig.add_trace(go.Scatter(
             x=t, y=s, name=name, mode="lines",
             line=dict(color=NETWORK_COLORS.get(name), width=4 if name == "Overall" else 2),
-            visible=True if name in ("Overall",) or len(ts) <= 5 else True,
+            visible=True if name in ["Overall"] + COMPARE_NETWORKS else "legendonly",
         ))
+    if unreliable_last and len(t) > 1:
+        fig.add_vrect(x0=t[-1] - tr / 2, x1=t[-1] + tr / 2, fillcolor="#999", opacity=0.25,
+                      line_width=0, annotation_text="end of video: less reliable",
+                      annotation_position="bottom right")
     for rank, i in enumerate(peaks, 1):
         fig.add_vline(x=i * tr, line=dict(color="#e4572e", dash="dot"),
                       annotation_text=f"peak #{rank}", annotation_position="top")
@@ -458,6 +472,7 @@ def intensity_figure(ts: dict[str, np.ndarray], tr: float, peaks: list[int]):
         height=480, margin=dict(l=50, r=20, t=40, b=40), hovermode="x unified",
         xaxis_title="time in reel (s)", yaxis_title="predicted response (a.u.)",
         legend=dict(orientation="h", y=-0.2), template="plotly_white",
+        yaxis=dict(range=list(chart_ylim(ts))),
         title=dict(text="Brain response intensity over time (click legend items to toggle)",
                    font=dict(size=14)),
     )
