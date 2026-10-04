@@ -20,7 +20,7 @@ jobs:
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          SPACE_HARDWARE: l40sx1
+          SPACE_HARDWARE: l4x1
         run: |
           if [ -z "$HF_TOKEN" ]; then
             echo "::error::Add a Hugging Face WRITE token as the repository secret HF_TOKEN (Settings → Secrets and variables → Actions)."
