@@ -73,17 +73,25 @@ def image_to_video(path: str, seconds: float) -> str:
     return str(out)
 
 
-def stage_upload(path: str) -> Path:
+def stage_upload(path: str, start: float = 0, seconds: float = 0) -> Path:
     """Copy the upload to a stable, content-addressed .mp4 so features get cached
-    and re-analysing the same reel is fast. Non-mp4 inputs are transcoded."""
+    and re-analysing the same reel is fast. Non-mp4 inputs are transcoded.
+    With start/seconds set, only that part of the video is kept, so the model
+    only processes those seconds."""
     h = hashlib.sha1()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
-    dst = CACHE / "uploads" / f"reel_{h.hexdigest()[:16]}.mp4"
+    trim = start > 0 or seconds > 0
+    suffix = f"_from{start:g}s_{seconds:g}s" if trim else ""
+    dst = CACHE / "uploads" / f"reel_{h.hexdigest()[:16]}{suffix}.mp4"
     dst.parent.mkdir(parents=True, exist_ok=True)
     if not dst.exists():
-        if Path(path).suffix.lower() == ".mp4":
+        if trim:
+            cut = ["-ss", f"{start:g}"] + (["-t", f"{seconds:g}"] if seconds > 0 else [])
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *cut, "-i", path, "-c:v", "libx264",
+                            "-pix_fmt", "yuv420p", "-c:a", "aac", str(dst)], check=True)
+        elif Path(path).suffix.lower() == ".mp4":
             shutil.copy(path, dst)
         else:
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", path, "-c:v", "libx264",
@@ -303,15 +311,18 @@ def make_moments(video: Path, dense, ts, peaks, tr, thr, vmax, diverging, out_di
     return gallery
 
 
-def analyze(video_path, image_path, image_seconds, language, colormap, threshold_pct, make_movie,
-            progress=gr.Progress()):
+def analyze(video_path, image_path, image_seconds, clip_start, clip_seconds, language, colormap,
+            threshold_pct, make_movie, progress=gr.Progress()):
     if not video_path and image_path:
         video_path = image_to_video(image_path, image_seconds)
     if not video_path:
         raise gr.Error("Upload a reel or a photo first.")
     t0 = time.time()
     progress(0.01, desc="Preparing video…")
-    video = stage_upload(video_path)
+    clip_start, clip_seconds = float(clip_start or 0), float(clip_seconds or 0)
+    if clip_start > 0 and clip_start >= probe_duration(video_path):
+        raise gr.Error(f"'Start at' ({clip_start:g}s) is past the end of the video.")
+    video = stage_upload(video_path, clip_start, clip_seconds)
     duration = probe_duration(str(video))
     if duration > 300:
         raise gr.Error(f"Video is {duration:.0f}s long; please keep it under 5 minutes.")
@@ -405,6 +416,10 @@ def build_ui() -> gr.Blocks:
         with gr.Row():
             with gr.Column(scale=1, min_width=320):
                 video_in = gr.Video(label="Your reel (.mp4 / .mov / .webm)", sources=["upload"], height=480)
+                with gr.Row():
+                    clip_start = gr.Number(value=0, minimum=0, label="Start at (s)")
+                    clip_seconds = gr.Number(value=0, minimum=0,
+                                             label="Seconds to analyze (0 = whole video)")
                 with gr.Accordion("…or analyze a photo", open=False):
                     image_in = gr.Image(label="Photo (shown as a still clip)", type="filepath", sources=["upload"])
                     image_seconds = gr.Slider(5, 30, value=10, step=1, label="Show the photo for (s)")
@@ -436,7 +451,7 @@ def build_ui() -> gr.Blocks:
                         files = gr.File(label="Results", file_count="multiple")
         run_btn.click(
             analyze,
-            inputs=[video_in, image_in, image_seconds, language, colormap, threshold, make_movie],
+            inputs=[video_in, image_in, image_seconds, clip_start, clip_seconds, language, colormap, threshold, make_movie],
             outputs=[status, movie_out, plot3d, intensity, avg_img, gallery, table, files],
         )
     return demo
