@@ -1,0 +1,28 @@
+name: Deploy TRIBE Reel Studio app
+
+on:
+  push:
+    branches: [tribe-reel-studio, main]
+    paths:
+      - "tribe-reel-studio/**"
+      - ".github/workflows/tribe-reel-studio-space.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -q huggingface_hub
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Add a Hugging Face WRITE token as the repository secret HF_TOKEN (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          python tribe-reel-studio/deploy_space.py
