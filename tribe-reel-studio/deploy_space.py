@@ -29,10 +29,18 @@ except Exception as e:
     fail("Hugging Face login", e)
 repo_id = f"{user}/{os.environ.get('SPACE_NAME') or 'tribe-reel-studio'}"
 
-try:
-    api.create_repo(repo_id, repo_type="space", space_sdk="gradio", private=True, exist_ok=True)
-except Exception as e:
-    fail(f"Creating Space {repo_id}", e)
+# Create the Space only if it doesn't exist yet (Hugging Face rejects creates on the free
+# CPU tier without PRO, so create it on the website with GPU hardware instead).
+if not api.repo_exists(repo_id, repo_type="space"):
+    try:
+        api.create_repo(repo_id, repo_type="space", space_sdk="gradio", private=True)
+    except Exception as e:
+        try:
+            names = [sp.id for sp in api.list_spaces(author=user)]
+        except Exception:
+            names = []
+        print(f"::error::Space {repo_id} not found. Spaces on this account: {names or 'none'}")
+        fail(f"Creating Space {repo_id}", e)
 with tempfile.TemporaryDirectory() as tmp:
     for f in ("app.py", "brain_viz.py"):
         shutil.copy(here / f, tmp)
