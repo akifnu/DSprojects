@@ -37,15 +37,17 @@ git clone https://github.com/akifnu/DSprojects.git
 cd DSprojects/perfumerecom
 ```
 
-## Version 2: Microsoft Decision-1 on OpenRouter
+## Version 2: Jev on OpenRouter
 
-`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. Three things changed:
+`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. What changed:
 
-- **Faster search model:** [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m) replaces e5-large. It's about half the size and scores higher on the MTEB multilingual benchmark (66.6 vs 63.2), especially on retrieval (66.4 vs 57.1).
 - **Every perfume is searchable:** all 23,973 perfumes in `fragrantica.xlsx`. v1 only searched about 4,000 (big brands, released in 2000 or later, rated 4.0 or higher). Those filters can be switched back on at the top of the data cell.
-- **No FAISS:** with about 24,000 perfumes, a single numpy calculation takes a few milliseconds. The first run embeds the catalog once and saves it as `perfume_embeddings_harrier270m.npy`.
-- **New ranking model:** the five virtual experts run on [Microsoft-Decision-1](https://openrouter.ai/microsoft) through OpenRouter's Decisions API instead of Llama 4 on Groq. They score a shortlist of 15 perfumes instead of 25.
+- **Search by name:** each perfume's name and brand are part of the text it's searched by. If your request names a perfume ("like Aventus but softer"), that perfume is always put on the shortlist.
+- **Gender filter:** a request for men searches men's and unisex perfumes, a request for women searches women's and unisex perfumes, and "unisex" searches unisex perfumes only.
+- **Faster search model:** [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m) replaces e5-large. It's about half the size and scores higher on the MTEB benchmark. Setting `EMBED_MODEL` back to v1's e5 model is a one-line change.
+- **No FAISS:** with about 24,000 perfumes, a single numpy calculation takes a few milliseconds. The first run embeds the catalog once and caches it.
+- **New ranking model:** the five virtual experts run on [Jev](https://openrouter.ai/docs/guides/community/jev) (`typesafe/jev-1.13`) through OpenRouter's Decisions API, instead of Llama 4 on Groq.
 
-Microsoft-Decision-1 doesn't write text. It answers fixed questions with a probability for each possible answer. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) scores each of the 15 candidates from 0 to 4. The top 5 are the perfumes with the highest average score, and you can see every expert's score in the results table.
+Jev doesn't write text. It picks from options you define and gives a probability for each one. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) looks at all 30 shortlisted perfumes side by side and gives each one a probability of being the best fit. The top 5 are the perfumes with the highest average, and the results table shows every expert's vote.
 
-To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. Keep `fragrantica.xlsx` next to the notebook, or upload it to `/content` on Colab.
+To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
