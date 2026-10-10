@@ -35,3 +35,12 @@ You can use this on Google Colab, Jupyter, or locally. To get going, just run:
 ```bash
 git clone https://github.com/akifnu/DSprojects.git
 cd DSprojects/perfumerecom
+```
+
+## Version 2: Microsoft Decision-1 on OpenRouter
+
+`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. The search step is the same, but the five virtual experts now run on [Microsoft-Decision-1](https://openrouter.ai/microsoft) through OpenRouter's Decisions API instead of Llama 4 on Groq.
+
+Microsoft-Decision-1 doesn't write text. It answers fixed questions with a probability for each possible answer. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) scores each of the 25 candidates from 0 to 4. The top 5 are the perfumes with the highest average score, and you can see every expert's score in the results table.
+
+To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `OPENROUTER_API_KEY`; otherwise the notebook asks for it. Keep `fragrantica.xlsx` next to the notebook, or upload it to `/content` on Colab.
