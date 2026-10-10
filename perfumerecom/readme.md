@@ -39,21 +39,17 @@ cd DSprojects/perfumerecom
 
 ## Version 2: Jev on OpenRouter
 
-`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. It uses no LLMs: [Jev](https://openrouter.ai/docs/guides/community/jev) (`typesafe/jev-1.13`), a decision model on OpenRouter, does the judging, and a small embedding model helps with search.
+`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. **Every decision is made by [Jev](https://openrouter.ai/docs/guides/community/jev)** (`typesafe/jev-1.13`), a decision model on OpenRouter. No LLMs, no embedding model and no similarity search are involved. Jev looks at every perfume in the catalog and picks the best ones in a knockout tournament:
 
-How a search works:
+1. **Who is it for?** Jev decides men, women, unisex or anyone. A request for men searches men's and unisex perfumes, a request for women searches women's and unisex perfumes, and "unisex" searches unisex perfumes only.
+2. **Heats:** the catalog is shuffled and split into groups of about 80. For each group Jev answers *"which of these perfumes best fits the customer?"*, seeing each perfume's notes, accords, rating and number of ratings, and gives every perfume a probability. The best few from each group go through, about 1 in 20.
+3. **Semi-final:** the survivors compete the same way until 30 are left.
+4. **Final:** five experts (Literal, Emotional, Contextual, Resolver, Synthesizer) compare the 30 side by side. The top five by average vote are the recommendations.
 
-1. **Jev reads the request.** In one request it answers who the perfume is for (men, women, unisex or anyone) and a yes/no question for each of about 50 accords: *"Would a perfume that fits this request have a prominent aquatic accord?"* The probabilities form a **scent profile**. "A summer evening by the sea", for example, comes out high on aquatic, citrus and fresh.
-2. **The shortlist of 30 is chosen by three signals:**
-   - **accord fit:** how well each perfume's main accords match the scent profile (50%)
-   - **meaning:** embedding similarity between the request and the perfume's name, brand, notes and accords (35%), using [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m)
-   - **popularity:** number and average of ratings, so well-loved perfumes beat obscure ones when the fit is similar (15%)
+Perfumes you name in the request ("like Aventus but softer") go straight to the final.
 
-   Perfumes you name ("like Aventus but softer") are always included. A request for men only searches men's and unisex perfumes, and the same goes for women.
-3. **Jev judges the shortlist.** Five experts (Literal, Emotional, Contextual, Resolver, Synthesizer) each compare all 30 perfumes side by side and give each one a probability of being the best fit. The final top 5 blends their consensus (60%) with the shortlist score (40%).
+The catalog uses v1's filters except the release year: brands with at least 60 perfumes in `fragrantica.xlsx`, which drops little-known brands, and a rating of 4.0 or higher, from any year. That's 5,041 of the 23,973 perfumes; v1 also required 2000 or later, which left 4,173. The filters, heat size and number of finalists are settings in the notebook.
 
-The searchable catalog uses v1's filters except the release year: brands with at least 60 perfumes in `fragrantica.xlsx`, which drops little-known brands, and a rating of 4.0 or higher, from any year. That's 5,041 of the 23,973 perfumes; v1 also required 2000 or later, which left 4,173. The filters and weights are settings at the top of the notebook's cells.
-
-The perfume embeddings are precomputed and stored in this folder, so Colab downloads them in seconds instead of embedding the catalog in every session. The **Perfume embeddings** GitHub Actions workflow (`.github/workflows/perfume-embeddings.yml`) rebuilds them with `build_embeddings.py` whenever the data or the notebook changes on `main`. You can also start it by hand from the Actions tab.
+A search is about 40 Jev requests sent in parallel, a few seconds and roughly a cent on your OpenRouter account. Nothing needs to be downloaded besides three small Python packages, so it runs on any Colab runtime, with no GPU.
 
 To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
