@@ -26,7 +26,7 @@ The index and embedding files are already included so your searches will be quic
 
 ## The data
 
-The perfume data comes from the [Fragrantica.com Fragrance Dataset on Kaggle](https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset?select=fra_perfumes.csv). I cleaned it a bit and saved it as `fragrantica.xlsx` for this project. It has 23,973 perfumes and only the columns the recommender uses: `Perfume`, `Brand`, `Gender`, `Year`, `Rating Value`, `Notes` (top, middle and base notes) and `Accord` (the main accords, strongest first).
+The perfume data comes from the [Fragrantica.com Fragrance Dataset on Kaggle](https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset?select=fra_perfumes.csv). I cleaned it a bit and saved it as `fragrantica.xlsx` for this project. It has 23,973 perfumes and only the columns the recommender uses: `Perfume`, `Brand`, `Gender`, `Year`, `Rating Value`, `Rating Count`, `Notes` (top, middle and base notes) and `Accord` (the main accords, strongest first).
 
 ## Getting started
 
@@ -39,15 +39,19 @@ cd DSprojects/perfumerecom
 
 ## Version 2: Jev on OpenRouter
 
-`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. What changed:
+`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. It uses no LLMs: [Jev](https://openrouter.ai/docs/guides/community/jev) (`typesafe/jev-1.13`), a decision model on OpenRouter, does the judging, and a small embedding model helps with search.
 
-- **Every perfume is searchable:** all 23,973 perfumes in `fragrantica.xlsx`. v1 only searched about 4,000 (big brands, released in 2000 or later, rated 4.0 or higher). Those filters can be switched back on at the top of the data cell.
-- **Search by name:** each perfume's name and brand are part of the text it's searched by. If your request names a perfume ("like Aventus but softer"), that perfume is always put on the shortlist.
-- **Gender filter:** a request for men searches men's and unisex perfumes, a request for women searches women's and unisex perfumes, and "unisex" searches unisex perfumes only.
-- **Faster search model:** [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m) replaces e5-large. It's about half the size and scores higher on the MTEB benchmark. Setting `EMBED_MODEL` back to v1's e5 model is a one-line change.
-- **No FAISS:** with about 24,000 perfumes, a single numpy calculation takes a few milliseconds. The first run embeds the catalog once and caches it.
-- **New ranking model:** the five virtual experts run on [Jev](https://openrouter.ai/docs/guides/community/jev) (`typesafe/jev-1.13`) through OpenRouter's Decisions API, instead of Llama 4 on Groq.
+How a search works:
 
-Jev doesn't write text. It picks from options you define and gives a probability for each one. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) looks at all 30 shortlisted perfumes side by side and gives each one a probability of being the best fit. The top 5 are the perfumes with the highest average, and the results table shows every expert's vote.
+1. **Jev reads the request.** In one request it answers who the perfume is for (men, women, unisex or anyone) and a yes/no question for each of about 50 accords: *"Would a perfume that fits this request have a prominent aquatic accord?"* The probabilities form a **scent profile**. "A summer evening by the sea", for example, comes out high on aquatic, citrus and fresh.
+2. **The shortlist of 30 is chosen by three signals:**
+   - **accord fit:** how well each perfume's main accords match the scent profile (50%)
+   - **meaning:** embedding similarity between the request and the perfume's name, brand, notes and accords (35%), using [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m)
+   - **popularity:** number and average of ratings, so well-loved perfumes beat obscure ones when the fit is similar (15%)
+
+   Perfumes you name ("like Aventus but softer") are always included. A request for men only searches men's and unisex perfumes, and the same goes for women.
+3. **Jev judges the shortlist.** Five experts (Literal, Emotional, Contextual, Resolver, Synthesizer) each compare all 30 perfumes side by side and give each one a probability of being the best fit. The final top 5 blends their consensus (60%) with the shortlist score (40%).
+
+All 23,973 perfumes in `fragrantica.xlsx` are searchable. v1's filters (big brands, released in 2000 or later, rated 4.0 or higher) can be switched back on at the top of the data cell. The weights are settings too.
 
 To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
