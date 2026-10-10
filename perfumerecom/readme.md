@@ -42,7 +42,8 @@ cd DSprojects/perfumerecom
 `Perfume_Recommender_Decision1.ipynb` is a new version of the tool. Three things changed:
 
 - **Faster search model:** [Microsoft Harrier OSS v1 270M](https://huggingface.co/microsoft/harrier-oss-v1-270m) replaces e5-large. It's about half the size and scores higher on the MTEB multilingual benchmark (66.6 vs 63.2), especially on retrieval (66.4 vs 57.1).
-- **No FAISS:** with a few thousand perfumes, a single numpy calculation is just as fast. The first run embeds the catalog once and saves it as `perfume_embeddings_harrier270m.npy`.
+- **Every perfume is searchable:** all 23,973 perfumes in `fragrantica.xlsx`. v1 only searched about 4,000 (big brands, released in 2000 or later, rated 4.0 or higher). Those filters can be switched back on at the top of the data cell.
+- **No FAISS:** with about 24,000 perfumes, a single numpy calculation takes a few milliseconds. The first run embeds the catalog once and saves it as `perfume_embeddings_harrier270m.npy`.
 - **New ranking model:** the five virtual experts run on [Microsoft-Decision-1](https://openrouter.ai/microsoft) through OpenRouter's Decisions API instead of Llama 4 on Groq. They score a shortlist of 15 perfumes instead of 25.
 
 Microsoft-Decision-1 doesn't write text. It answers fixed questions with a probability for each possible answer. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) scores each of the 15 candidates from 0 to 4. The top 5 are the perfumes with the highest average score, and you can see every expert's score in the results table.
