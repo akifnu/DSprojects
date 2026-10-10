@@ -43,4 +43,4 @@ cd DSprojects/perfumerecom
 
 Microsoft-Decision-1 doesn't write text. It answers fixed questions with a probability for each possible answer. Each expert (Literal, Emotional, Contextual, Resolver, Synthesizer) scores each of the 25 candidates from 0 to 4. The top 5 are the perfumes with the highest average score, and you can see every expert's score in the results table.
 
-To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `OPENROUTER_API_KEY`; otherwise the notebook asks for it. Keep `fragrantica.xlsx` next to the notebook, or upload it to `/content` on Colab.
+To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. Keep `fragrantica.xlsx` next to the notebook, or upload it to `/content` on Colab.
