@@ -39,17 +39,15 @@ cd DSprojects/perfumerecom
 
 ## Version 2: Jev on OpenRouter
 
-`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. **Every decision is made by [Jev](https://openrouter.ai/docs/guides/community/jev)** (`typesafe/jev-1.13`), a decision model on OpenRouter. No LLMs, no embedding model and no similarity search are involved. Jev looks at every perfume in the catalog and picks the best ones in a knockout tournament:
+`Perfume_Recommender_Decision1.ipynb` is a new version of the tool. Every decision is made by [Jev](https://openrouter.ai/docs/guides/community/jev) (`typesafe/jev-1.13`), a decision model on OpenRouter. There are no LLMs, no embeddings, and no hand-written rules or hints. Jev is asked two plain questions and sees each perfume exactly as the data describes it: name, brand, gender, main accords and notes.
 
-1. **Who is it for?** Jev decides men, women, unisex or anyone. A request for men searches men's and unisex perfumes, a request for women searches women's and unisex perfumes, and "unisex" searches unisex perfumes only.
-2. **Heats:** the catalog is shuffled and split into groups of about 80. For each group Jev answers *"which of these perfumes best fits the customer?"*, seeing each perfume's notes, accords, rating and number of ratings, and gives every perfume a probability. The best few from each group go through, about 1 in 20.
-3. **Semi-final:** the survivors compete the same way until 30 are left.
-4. **Final:** five experts (Literal, Emotional, Contextual, Resolver, Synthesizer) compare the 30 side by side. The top five by average vote are the recommendations.
+1. **Heats:** the catalog is shuffled into groups of 40, and for each group Jev answers *"Which perfume best matches the customer's request?"* with a probability for every perfume. Each perfume is judged in two different groups and its results are averaged. The best eighth go through, and this repeats until 30 finalists remain.
+2. **Final:** Jev rates each finalist on its own: *"How well does this perfume match the customer's request?"*, from "does not match" to "matches perfectly". The top five are the recommendations.
 
-Perfumes you name in the request ("like Aventus but softer") go straight to the final.
+A search over the 5,041-perfume catalog is about 290 Jev requests sent 16 at a time, roughly 10–20 seconds and about 3 cents. The notebook also has:
+- **Check Jev:** one small request that prints Jev's raw answer, to confirm it's read correctly.
+- **Accuracy Test:** test requests generated from the data (perfume names, pairs of notes, accords with gender), plus any you add to `MY_TESTS`, reported as a percentage of requests where a right perfume is in the top five.
 
-The catalog uses v1's filters except the release year: brands with at least 60 perfumes in `fragrantica.xlsx`, which drops little-known brands, and a rating of 4.0 or higher, from any year. That's 5,041 of the 23,973 perfumes; v1 also required 2000 or later, which left 4,173. The filters, heat size and number of finalists are settings in the notebook.
-
-A search is about 40 Jev requests sent in parallel, a few seconds and roughly a cent on your OpenRouter account. Nothing needs to be downloaded besides three small Python packages, so it runs on any Colab runtime, with no GPU.
+The catalog uses v1's filters except the release year: brands with at least 60 perfumes in `fragrantica.xlsx` and a rating of 4.0 or higher, from any year (5,041 of 23,973 perfumes).
 
 To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
