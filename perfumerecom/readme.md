@@ -54,4 +54,6 @@ How a search works:
 
 All 23,973 perfumes in `fragrantica.xlsx` are searchable. v1's filters (big brands, released in 2000 or later, rated 4.0 or higher) can be switched back on at the top of the data cell. The weights are settings too.
 
+The perfume embeddings are precomputed and stored in this folder, so Colab downloads them in seconds instead of embedding about 24,000 perfumes in every session. The **Perfume embeddings** GitHub Actions workflow (`.github/workflows/perfume-embeddings.yml`) rebuilds them with `build_embeddings.py` whenever the data or the notebook changes on `main`. You can also start it by hand from the Actions tab.
+
 To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
