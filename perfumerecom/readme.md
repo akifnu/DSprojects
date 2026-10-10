@@ -52,8 +52,8 @@ How a search works:
    Perfumes you name ("like Aventus but softer") are always included. A request for men only searches men's and unisex perfumes, and the same goes for women.
 3. **Jev judges the shortlist.** Five experts (Literal, Emotional, Contextual, Resolver, Synthesizer) each compare all 30 perfumes side by side and give each one a probability of being the best fit. The final top 5 blends their consensus (60%) with the shortlist score (40%).
 
-All 23,973 perfumes in `fragrantica.xlsx` are searchable. v1's filters (big brands, released in 2000 or later, rated 4.0 or higher) can be switched back on at the top of the data cell. The weights are settings too.
+The searchable catalog uses v1's filters except the release year: brands with at least 60 perfumes in `fragrantica.xlsx`, which drops little-known brands, and a rating of 4.0 or higher, from any year. That's 5,041 of the 23,973 perfumes; v1 also required 2000 or later, which left 4,173. The filters and weights are settings at the top of the notebook's cells.
 
-The perfume embeddings are precomputed and stored in this folder, so Colab downloads them in seconds instead of embedding about 24,000 perfumes in every session. The **Perfume embeddings** GitHub Actions workflow (`.github/workflows/perfume-embeddings.yml`) rebuilds them with `build_embeddings.py` whenever the data or the notebook changes on `main`. You can also start it by hand from the Actions tab.
+The perfume embeddings are precomputed and stored in this folder, so Colab downloads them in seconds instead of embedding the catalog in every session. The **Perfume embeddings** GitHub Actions workflow (`.github/workflows/perfume-embeddings.yml`) rebuilds them with `build_embeddings.py` whenever the data or the notebook changes on `main`. You can also start it by hand from the Actions tab.
 
 To run it you need an [OpenRouter API key](https://openrouter.ai/keys). On Colab, save it as a secret named `Decision_api` (with "Notebook access" turned on); otherwise the notebook asks for it. The notebook downloads `fragrantica.xlsx` from this repo if it isn't next to the notebook.
