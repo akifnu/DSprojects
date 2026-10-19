@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# reel — the production line's command line (see `reel --help`).
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m reelkit "$@"
