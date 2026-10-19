@@ -432,6 +432,8 @@ def grade_filters(g, base_dir):
 
 
 def _encoder_args(enc, draft, encoder):
+    if enc.get("lossless"):              # references for quality measurement (VMAF)
+        return ["-c:v", "libx264", "-preset", "ultrafast", "-qp", "0"]
     if encoder == "nvenc":
         return ["-c:v", "h264_nvenc", "-preset", "p5" if not draft else "p2", "-rc", "vbr", "-cq",
                 str(enc.get("cq", 19)), "-b:v", "0"]
