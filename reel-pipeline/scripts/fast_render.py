@@ -2,6 +2,7 @@
 
     python3 fast_render.py <project.json> <out.mp4> [--lufs -14] [--encoder cpu|auto|nvenc]
     python3 fast_render.py <project.json> <still.jpg> --frame <seconds>   (preview one frame)
+    --res 720 renders at 720p (short side 720, e.g. 720×1280) whatever the project canvas is
 
 The browser export draws every frame in software here (~1 frame/s); this
 builds one ffmpeg filtergraph instead. Speed depends on the sources and host. It
@@ -18,6 +19,7 @@ speed, SVG, comps…) is listed and the script exits 2 — build the effect anot
 way (or add it here) rather than reaching for the editor's browser export.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 import io
 import json
@@ -231,6 +233,8 @@ def main():
     ap.add_argument("--frame", type=float, help="render only the picture at this time, as a still")
     ap.add_argument("--encoder", choices=("cpu", "auto", "nvenc"), default=os.getenv("VIDEO_ENCODER", "cpu"))
     ap.add_argument("--cpu-preset", default=os.getenv("CPU_PRESET", "fast"))
+    ap.add_argument("--res", type=int, default=int(os.getenv("RES", "0")),
+                    help="output short side in px (720 → 720×1280); 0 keeps the project canvas")
     ap.add_argument("--nvenc-preset", choices=tuple(f"p{i}" for i in range(1, 8)), default="p4")
     ap.add_argument("--nvenc-cq", type=int, choices=range(0, 52), default=19)
     ap.add_argument("--threads", type=int, default=int(os.getenv("RENDER_THREADS", "0")),
@@ -244,7 +248,24 @@ def main():
         render_project(proj, a, tmp)
 
 
+def scale_project(proj, res):
+    """The same edit on a canvas whose short side is `res` px: positions and text scale with it."""
+    k = res / min(proj["width"], proj["height"])
+    if abs(k - 1) < 1e-6:
+        return proj
+    proj = json.loads(json.dumps(proj))
+    proj["width"], proj["height"] = (2 * round(proj[d] * k / 2) for d in ("width", "height"))
+    for c in proj["clips"]:
+        p = c.get("props") or {}
+        for key in ("x", "y", "fontSize", "strokeWidth", "boxW", "boxH", "letterSpacing"):
+            if isinstance(p.get(key), (int, float)):
+                p[key] = p[key] * k
+    return proj
+
+
 def render_project(proj, a, tmp):
+    if getattr(a, "res", None):
+        proj = scale_project(proj, a.res)
     started = time.monotonic()
     W, H, fps = proj["width"], proj["height"], proj.get("fps", 30)
     media = {m["id"]: m for m in proj.get("media", [])}
@@ -290,36 +311,125 @@ def render_project(proj, a, tmp):
     def track_no(c):
         return int(re.sub(r"\D", "", c["track"]) or 0)
 
-    vf.append(f"color=c={proj.get('background', '#000000')}:s={W}x{H}:r={fps}:d={total:.3f},format=yuv420p[base]")
-    last = "base"
+    bg = proj.get("background", "#000000")
     visual = sorted([c for c in clips if c["kind"] in ("video", "image", "text")], key=lambda c: (track_no(c), c["start"]))
-    for n, c in enumerate(visual):
+
+    def frame_no(t):
+        return round(t * fps)
+
+    def placed(c, n):
+        """Input index, scale chain and top-left position of a video/image clip."""
+        p = c.get("props") or {}
+        path = media_path(media[c["mediaId"]]["src"])
+        info = cached_probe(path)
+        if c["kind"] == "image":
+            k = add_input(["-loop", "1", "-t", f"{c['duration']:.3f}", "-i", path])
+        else:
+            k = add_input(["-ss", f"{c.get('in', 0):.3f}", "-t", f"{c['duration']:.3f}", "-i", path])
+        fit, sc = p.get("fit", "contain"), p.get("scale", 1)
+        if fit == "stretch":
+            ow, oh = W * sc, H * sc
+        else:
+            f = (max if fit == "cover" else min)(W / info["w"], H / info["h"])
+            ow, oh = info["w"] * f * sc, info["h"] * f * sc
+        ow, oh = 2 * round(ow / 2), 2 * round(oh / 2)
+        x, y = round(W / 2 + p.get("x", 0) - ow / 2), round(H / 2 + p.get("y", 0) - oh / 2)
+        transform, x, y = visible_scale(info["w"], info["h"], ow, oh, x, y, W, H)
+        sw, sh = map(int, re.search(r"scale=(\d+):(\d+)", transform).groups())
+        return k, f"fps={fps},{transform},setsar=1", x, y, sw, sh
+
+    # The lowest video track, when its clips don't overlap and are opaque, is laid
+    # end to end (gaps = background) instead of stacked: one full frame per output
+    # frame rather than one overlay per clip.
+    pics = [c for c in visual if c["kind"] in ("video", "image")]
+    lowest = min((track_no(c) for c in pics), default=None)
+    base = [c for c in pics if track_no(c) == lowest]
+    sequential = all(b["start"] >= a["start"] + a["duration"] - 1e-3 for a, b in zip(base, base[1:])) \
+        and all((c.get("props") or {}).get("opacity", 1) == 1 for c in base)
+    if not sequential:
+        base = []
+    segments, t = [], 0.0
+    for n, c in enumerate(base):
+        if frame_no(c["start"]) > frame_no(t):
+            segments.append(f"color=c={bg}:s={W}x{H}:r={fps},format=yuv420p,setsar=1,"
+                            f"trim=end_frame={frame_no(c['start']) - frame_no(t)}[g{n}]")
+        k, chain, x, y, sw, sh = placed(c, n)
+        frames = frame_no(c["start"] + c["duration"]) - frame_no(c["start"])
+        cx0, cy0 = max(0, -x), max(0, -y)
+        cw, ch = min(sw, W - x) - cx0, min(sh, H - y) - cy0
+        fit = f"crop={cw}:{ch}:{cx0}:{cy0}" if (cw, ch) != (sw, sh) else "null"
+        if (cw, ch) != (W, H):
+            fit += f",pad={W}:{H}:{max(x, 0)}:{max(y, 0)}:color={bg}"
+        segments.append(f"[{k}:v]{chain},{fit},format=yuv420p,setpts=PTS-STARTPTS,"
+                        f"tpad=stop=-1:stop_mode=clone,trim=end_frame={frames}[b{n}]")
+        t = c["start"] + c["duration"]
+    if base and frame_no(total) > frame_no(t):
+        segments.append(f"color=c={bg}:s={W}x{H}:r={fps},format=yuv420p,setsar=1,"
+                        f"trim=end_frame={frame_no(total) - frame_no(t)}[gend]")
+    if base:
+        vf.extend(segments)
+        labels = "".join("[" + seg.rsplit("[", 1)[1] for seg in segments)
+        vf.append(f"{labels}concat=n={len(segments)}:v=1:a=0[base]")
+    else:
+        vf.append(f"color=c={bg}:s={W}x{H}:r={fps}:d={total:.3f},format=yuv420p[base]")
+    last = "base"
+    rest = [c for c in visual if c not in base]
+    # Captions on the top tracks that never overlap in time become one image
+    # sequence (one input, one overlay) cropped to the area they share.
+    texts = [c for c in rest if c["kind"] == "text"]
+    top_pic = max((track_no(c) for c in rest if c["kind"] != "text"), default=-1)
+    by_time = sorted(texts, key=lambda c: c["start"])
+    if len(texts) > 1 and all(track_no(c) > top_pic for c in texts) \
+            and all(b["start"] >= a["start"] + a["duration"] - 1e-3 for a, b in zip(by_time, by_time[1:])):
+        rest = [c for c in rest if c["kind"] != "text"]
+        pngs = []
+        for n, c in enumerate(by_time):
+            png = os.path.join(tmp, f"t{n}.png")
+            render_text(c.get("props") or {}, W, H, png)
+            pngs.append(png)
+        imgs = [Image.open(p) if os.path.exists(p) else Image.new("RGBA", (W, H)) for p in pngs]
+        boxes = [i.getbbox() for i in imgs if i.getbbox()]
+        if boxes:
+            x0, y0 = min(b[0] for b in boxes) & ~1, min(b[1] for b in boxes) & ~1
+            x1, y1 = max(b[2] for b in boxes), max(b[3] for b in boxes)
+            x1, y1 = x1 + (x1 - x0) % 2, y1 + (y1 - y0) % 2
+            blank = os.path.join(tmp, "blank.png")
+            Image.new("RGBA", (x1 - x0, y1 - y0)).save(blank)
+            lines, t = ["ffconcat version 1.0"], 0
+            for c, img, png in zip(by_time, imgs, pngs):
+                img.crop((x0, y0, x1, y1)).save(png)
+                f0, f1 = frame_no(c["start"]), frame_no(c["start"] + c["duration"])
+                if f0 > t:
+                    lines += [f"file '{blank}'", f"duration {(f0 - t) / fps:.6f}"]
+                lines += [f"file '{png}'", f"duration {(f1 - f0) / fps:.6f}"]
+                t = f1
+            lines += [f"file '{blank}'", f"duration {max(frame_no(total) - t, 1) / fps:.6f}", f"file '{blank}'"]
+            listing = os.path.join(tmp, "captions.ffconcat")
+            open(listing, "w").write("\n".join(lines) + "\n")
+            k = add_input(["-f", "concat", "-safe", "0", "-i", listing])
+            vf.append(f"[{k}:v]fps={fps},format=rgba[caps]")
+            vf.append(f"[{last}][caps]overlay={x0}:{y0}:eof_action=pass[ocaps]")
+            last = "ocaps"
+    for n, c in enumerate(rest):
         p, s, e = c.get("props") or {}, c["start"], c["start"] + c["duration"]
         enable = f"between(t\\,{s:.3f}\\,{e - 0.0005:.3f})"
         if c["kind"] == "text":
             png = os.path.join(tmp, f"t{n}.png")
             render_text(p, W, H, png)
+            x = y = 0
+            if os.path.exists(png):  # overlay only the caption's own pixels
+                img = Image.open(png)
+                box = img.getbbox()
+                if box is None:
+                    continue
+                x, y = box[0] & ~1, box[1] & ~1
+                img.crop((x, y, box[2], box[3])).save(png)
             k = add_input(["-i", png])
-            vf.append(f"[{last}][{k}:v]overlay=0:0:enable='{enable}'[o{n}]")
+            vf.append(f"[{last}][{k}:v]overlay={x}:{y}:enable='{enable}'[o{n}]")
         else:
-            path = media_path(media[c["mediaId"]]["src"])
-            info = cached_probe(path)
-            if c["kind"] == "image":
-                k = add_input(["-loop", "1", "-t", f"{c['duration']:.3f}", "-i", path])
-            else:
-                k = add_input(["-ss", f"{c.get('in', 0):.3f}", "-t", f"{c['duration']:.3f}", "-i", path])
-            fit, sc = p.get("fit", "contain"), p.get("scale", 1)
-            if fit == "stretch":
-                ow, oh = W * sc, H * sc
-            else:
-                f = (max if fit == "cover" else min)(W / info["w"], H / info["h"])
-                ow, oh = info["w"] * f * sc, info["h"] * f * sc
-            ow, oh = 2 * round(ow / 2), 2 * round(oh / 2)
-            x, y = round(W / 2 + p.get("x", 0) - ow / 2), round(H / 2 + p.get("y", 0) - oh / 2)
-            transform, x, y = visible_scale(info["w"], info["h"], ow, oh, x, y, W, H)
+            k, chain, x, y, sw, sh = placed(c, n)
             alpha = f",format=rgba,colorchannelmixer=aa={p['opacity']}" if p.get("opacity", 1) < 1 else ""
-            vf.append(f"[{k}:v]fps={fps},{transform},setsar=1{alpha},"
-                      f"setpts=PTS-STARTPTS+{s:.3f}/TB[c{n}]")
+            vf.append(f"[{k}:v]{chain}{alpha},setpts=PTS-STARTPTS+{s:.3f}/TB[c{n}]")
             vf.append(f"[{last}][c{n}]overlay={x}:{y}:eof_action=pass:enable='{enable}'[o{n}]")
         last = f"o{n}"
     vf.append(f"[{last}]format=yuv420p[vout]")
@@ -346,19 +456,6 @@ def render_project(proj, a, tmp):
           f"{len(probes)} unique media probes, {inputs.count('-i')} visual inputs, "
           f"{audio_inputs.count('-i')} audio inputs", file=sys.stderr, flush=True)
 
-    # pass 1: the mix to WAV, measured
-    wav = os.path.join(tmp, "mix.wav")
-    if af:
-        run_stage("audio mix", [*ffmpeg, *audio_inputs, "-filter_complex", ";".join(af),
-                        "-map", "[aout]", "-t", f"{total:.3f}", wav])
-        m = run_stage("loudness analysis", ["ffmpeg", "-hide_banner", "-nostats", "-i", wav, "-vn", "-af",
-                            f"loudnorm=I={a.lufs}:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
-                           capture_output=True, text=True).stderr
-        j = json.loads(m[m.rindex("{"):])
-        norm = (f"loudnorm=I={a.lufs}:TP=-1:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:"
-                f"measured_LRA={j['input_lra']}:measured_thresh={j['input_thresh']}:offset={j['target_offset']}:"
-                f"linear=true,aresample=48000")
-
     if a.frame is not None:
         run_stage("preview", [*ffmpeg, *inputs, "-filter_complex", ";".join(vf),
                         "-map", "[vout]", "-ss", f"{a.frame:.3f}", "-frames:v", "1", *thread_args,
@@ -366,25 +463,41 @@ def render_project(proj, a, tmp):
         print(a.out)
         return
 
-    # pass 2: picture + normalized mix
+    # The picture and the sound don't depend on each other: encode the video while
+    # the mix is made, measured and normalized (two-pass loudnorm), then mux.
     print(f"[render] video encoder: {encoder}", file=sys.stderr, flush=True)
-    cmd = [*ffmpeg, *inputs]
-    if af:
-        cmd += ["-i", wav]
-        wi = sum(1 for x in cmd if x == "-i") - 1
-        vf.append(f"[{wi}:a]{norm}[anorm]")
-    cmd += ["-filter_complex", ";".join(vf), "-map", "[vout]"]
-    if af:
-        cmd += ["-map", "[anorm]", "-c:a", "aac", "-b:a", "256k", "-ar", "48000"]
+    video = os.path.join(tmp, "video.mp4")
+    cmd = [*ffmpeg, *inputs, "-filter_complex", ";".join(vf), "-map", "[vout]", "-an"]
     if encoder == "nvenc":
         cmd += ["-c:v", "h264_nvenc", "-preset", a.nvenc_preset, "-rc", "vbr", "-cq", str(a.nvenc_cq), "-b:v", "0"]
     else:
         cmd += ["-c:v", "libx264", "-preset", a.cpu_preset, "-crf", "19"]
     cmd += [*thread_args, "-maxrate", "25M", "-bufsize", "50M",
-            "-pix_fmt", "yuv420p", "-r", str(fps), "-g", str(round(fps)), "-movflags", "+faststart",
+            "-pix_fmt", "yuv420p", "-r", str(fps), "-g", str(round(fps)),
             "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
-            "-t", f"{total:.3f}", a.out]
-    run_stage("video render + audio normalization", cmd)
+            "-t", f"{total:.3f}", video]
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        picture = pool.submit(run_stage, "video render", cmd)
+        sound = None
+        if af:
+            wav = os.path.join(tmp, "mix.wav")
+            run_stage("audio mix", [*ffmpeg, *audio_inputs, "-filter_complex", ";".join(af),
+                                    "-map", "[aout]", "-t", f"{total:.3f}", wav])
+            m = run_stage("loudness analysis", ["ffmpeg", "-hide_banner", "-nostats", "-i", wav, "-vn", "-af",
+                                                f"loudnorm=I={a.lufs}:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
+                          capture_output=True, text=True).stderr
+            j = json.loads(m[m.rindex("{"):])
+            norm = (f"loudnorm=I={a.lufs}:TP=-1:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:"
+                    f"measured_LRA={j['input_lra']}:measured_thresh={j['input_thresh']}:offset={j['target_offset']}:"
+                    f"linear=true,aresample=48000")
+            sound = os.path.join(tmp, "audio.m4a")
+            run_stage("audio normalization", [*ffmpeg, "-i", wav, "-af", norm, "-c:a", "aac", "-b:a", "256k",
+                                              "-ar", "48000", "-t", f"{total:.3f}", sound])
+        picture.result()
+    mux = [*ffmpeg, "-i", video]
+    if sound:
+        mux += ["-i", sound, "-map", "0:v", "-map", "1:a"]
+    run_stage("mux", [*mux, "-c", "copy", "-movflags", "+faststart", "-t", f"{total:.3f}", a.out])
     print(f"[render] total: {time.monotonic() - started:.2f}s", file=sys.stderr, flush=True)
     print(a.out)
 

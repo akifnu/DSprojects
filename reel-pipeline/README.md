@@ -41,15 +41,18 @@ agent-drivable, JSON-timeline video editor; pinned to v1.15.0).
 
 ## Rendering
 
-Everything is rendered by ffmpeg, never by a browser: a 30 s reel takes about a
-minute. `fast_render.py` covers cuts, static zooms/reframes, captions with
+Everything is rendered by ffmpeg, never by a browser. `scripts/render.sh`
+defaults to **720p (720×1280)**, x264 `veryfast`: a 28 s reel renders in about
+10 s from a 720p edit copy of the footage (`prep.sh`). `RES=1080` gives
+1080×1920; `CPU_PRESET=fast` gives smaller files for a few more seconds. `fast_render.py` covers cuts, static zooms/reframes, captions with
 pills/stroke and the audio mix; it lists anything else it can't draw yet
 instead of rendering it wrong. FableCut's own export (a browser compositor) is
 not used. Without a GPU it ran at ~1 frame/s here.
 
 Exports log stage timings, probe each source once, and crop hidden source regions
-before scaling where alignment permits. CPU export retains the `fast` preset;
-try `CPU_PRESET=veryfast scripts/render.sh jobs/<job>/out` for a faster setting.
+before scaling where alignment permits. The main video track is joined end to end
+instead of stacked, captions become one image track, and the audio mix and
+two-pass loudness run while the video encodes, then the two are muxed.
 `VIDEO_ENCODER=auto` checks NVIDIA NVENC and falls back to CPU when unavailable;
 `VIDEO_ENCODER=nvenc` requires a working GPU encoder. See
 [GPU_RENDERING.md](GPU_RENDERING.md) for cloud-worker setup, asset transfer,

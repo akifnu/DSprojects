@@ -8,12 +8,13 @@ not included in this change.
 
 ## Existing host
 
-CPU rendering keeps the original `fast` preset and CRF 19 by default. To try a
-faster preset (check output quality and size before adopting it):
+`scripts/render.sh` renders 720p with x264 `veryfast` (CRF 19) by default;
+`fast_render.py` called directly keeps the project canvas and `fast`. For
+smaller files at the cost of a few seconds:
 
 ```bash
 cd reel-pipeline
-CPU_PRESET=veryfast scripts/render.sh jobs/job1/out
+CPU_PRESET=fast scripts/render.sh jobs/job1/out
 ```
 
 Each export logs preparation, audio mixing, loudness analysis, video rendering,

@@ -55,10 +55,11 @@ or end card. This is the spec every reel is checked against.
   lines (hook first). Picture-led footage: pick moments that match each sample
   shot's energy (calm ≤ 40, action ≥ 70).
 - Record selects in the brief as `raw file · in → out · why`.
-- Copy raw files into `workspace/media/`; the timeline can use them directly
-  (any codec ffmpeg reads). For heavy footage (4K, HEVC, 60 fps, long), make a
-  lighter 1080p/30 copy of just the selects:
-  `scripts/prep.sh <raw> <select-name> <in> <out>` → prints its `/media/…` src.
+- Copy raw files into `workspace/media/` and **start `scripts/prep.sh <raw> <name>`
+  in the background right away** (720p/30 H.264 edit copy; trim long files to their
+  selects with `<in> <out>`). Decoding 4K/HEVC/60 fps originals is the slowest
+  thing in the pipeline; doing it once, while transcribing and planning, keeps
+  every render ~10 s. Put the `.edit.mp4` on the timeline, not the original.
 
 ## 4. Build the timeline
 
@@ -106,8 +107,12 @@ reel-pipeline/scripts/render.sh reel-pipeline/jobs/<job>/out [name]
 reel-pipeline/scripts/qc.sh <out.mp4> <sample.mp4>
 ```
 
-A 30 s reel renders in about a minute (1080×1920 H.264 CRF 19, AAC 256k,
-two-pass loudnorm to −14 LUFS; `LUFS=` overrides). Transcribe the render (`scripts/transcribe.py`) and read it: jump cuts in
+Output is **720×1280** by default (the user's delivery size; `RES=1080` for
+1080×1920): H.264 CRF 19 veryfast, AAC 256k, two-pass loudnorm to −14 LUFS
+(`LUFS=` overrides). A 30 s reel renders in about 10 s. Keep the turnaround fast:
+run prep, transcription and the sample analysis in parallel, build the
+timeline from a script (`jobs/<job>/build_reelN.py`), preview 3–4 key frames,
+render once, QC. Transcribe the render (`scripts/transcribe.py`) and read it: jump cuts in
 narration must still say what was intended, and muted parts must be silent. Word
 timestamps can be off by ~0.3 s, so check every cut inside a sentence in the
 transcript. Compare the two sheets and the numbers against the brief (length,

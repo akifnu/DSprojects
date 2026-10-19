@@ -3,15 +3,15 @@
  "width": 1080,
  "height": 1920,
  "fps": 30,
- "revision": 15,
+ "revision": 19,
  "panSchema": 1,
  "background": "#ffffff",
  "media": [
   {
    "id": "m_r1",
-   "name": "R1.webm",
+   "name": "R1.edit.mp4",
    "kind": "video",
-   "src": "/media/R1.webm"
+   "src": "/media/R1.edit.mp4"
   }
  ],
  "clips": [

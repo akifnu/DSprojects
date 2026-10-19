@@ -93,7 +93,21 @@ class RenderTests(unittest.TestCase):
             render.render_project(project, args, directory)
         self.assertEqual(sum(c[0] == "ffprobe" for c in commands), 1)
         stages = [c for c in commands if c[0] == "ffmpeg"]
-        self.assertEqual([c.count("-i") for c in stages], [8, 1, 21])
+        # audio mix 8, loudness 1, video 9 (captions mocked), normalization 1, mux 2;
+        # video and audio run concurrently, so compare without order
+        self.assertEqual(sorted(c.count("-i") for c in stages), [1, 1, 2, 8, 9])
+
+    def test_scale_project_to_720p_scales_positions_and_text(self):
+        project = dict(width=1080, height=1920, clips=[
+            dict(id="t", props=dict(x=30, y=80, fontSize=56, strokeWidth=6, scale=2.0, text="Hi"))])
+        scaled = render.scale_project(project, 720)
+        self.assertEqual((scaled["width"], scaled["height"]), (720, 1280))
+        p = scaled["clips"][0]["props"]
+        for key, want in dict(x=20, y=80 * 2 / 3, fontSize=56 * 2 / 3, strokeWidth=4).items():
+            self.assertAlmostEqual(p[key], want)
+        self.assertEqual(p["scale"], 2.0)          # fit-relative, unchanged
+        self.assertEqual(project["width"], 1080)   # input untouched
+        self.assertIs(render.scale_project(project, 1080), project)
 
     def test_crop_preserves_framing_and_lanczos_pixels(self):
         # Compare decoded pixels to the original scale-then-overlay implementation.
@@ -150,7 +164,8 @@ class RenderTests(unittest.TestCase):
                 render.render_project(project, args, str(directory))
             self.assertEqual(sum(c[0] == "ffprobe" for c in commands), 1)
             stages = [c for c in commands if c[0] == "ffmpeg"]
-            self.assertEqual([c.count("-i") for c in stages], [1, 1, 4])
+            # audio mix 1, loudness 1, video 3, normalization 1, mux 2 (unordered: concurrent)
+            self.assertEqual(sorted(c.count("-i") for c in stages), [1, 1, 1, 2, 3])
             metadata = json.loads(RUN(["ffprobe", "-v", "error", "-show_streams", "-show_format",
                                        "-of", "json", args.out], check=True, capture_output=True).stdout)
             self.assertEqual([s["codec_name"] for s in metadata["streams"]], ["h264", "aac"])

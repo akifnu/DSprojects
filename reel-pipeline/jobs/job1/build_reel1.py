@@ -28,7 +28,7 @@ CAPTION = {"font": "Arimo", "weight": 700, "fontSize": 56, "color": "#ffffff",
            "bgColor": "#004B06", "bgOpacity": 1, "textShadow": 0, "strokeWidth": 0,
            "lineHeight": 1.25, "align": "center", "y": 80}
 
-media = [{"id": "m_r1", "name": "R1.webm", "kind": "video", "src": "/media/R1.webm"}]
+media = [{"id": "m_r1", "name": "R1.edit.mp4", "kind": "video", "src": "/media/R1.edit.mp4"}]
 clips, t = [], 0.0
 for i, (a, b, z, caps) in enumerate(SEGS):
     d = round(b - a, 3)
