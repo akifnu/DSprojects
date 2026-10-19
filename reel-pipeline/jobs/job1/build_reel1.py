@@ -19,11 +19,10 @@ SEGS = [
     (15.45, 17.15, COLS, [(15.45, 17.15, "...are COLUMNS")]),
     (17.30, 21.05, ROWS, [(17.30, 21.05, "Numbers down the side...")]),
     (21.20, 23.15, ROWS, [(21.20, 23.15, "...are ROWS")]),
-    (23.45, 24.55, E7,  [(23.45, 24.55, "Column + Row...")]),
-    (25.19, 28.38, E7,  [(25.19, 26.95, "Column + Row..."), (26.95, 28.38, "= Cell E7!")]),
+    (23.45, 28.38, E7,  [(23.45, 26.95, "Column + Row..."), (26.95, 28.38, "= Cell E7!")]),
     (28.38, 29.95, E7,  [(28.38, 29.95, "Send this to a friend\nwho's new to Excel!!")]),
 ]
-MUTED = {9}   # last segment: narration is cut off mid-sentence
+MUTED = {8}   # last segment: narration is cut off mid-sentence
 
 CAPTION = {"font": "Arimo", "weight": 700, "fontSize": 56, "color": "#ffffff",
            "bgColor": "#004B06", "bgOpacity": 1, "textShadow": 0, "strokeWidth": 0,
@@ -33,7 +32,7 @@ media = [{"id": "m_r1", "name": "R1.webm", "kind": "video", "src": "/media/R1.we
 clips, t = [], 0.0
 for i, (a, b, z, caps) in enumerate(SEGS):
     d = round(b - a, 3)
-    props = {"fit": "cover", "scale": z["s"], "x": z["x"], "y": z["y"]}
+    props = {"fit": "cover", "scale": z["s"], "x": z["x"], "y": z["y"], "volume": 0}  # sound comes from the A1 clips
     clips.append({"id": f"v{i}", "mediaId": "m_r1", "kind": "video", "track": "V1", "start": round(t, 3),
                   "in": a, "duration": d, "linkGroup": f"lg{i}", "props": props})
     clips.append({"id": f"a{i}", "mediaId": "m_r1", "kind": "audio", "track": "A1", "start": round(t, 3),

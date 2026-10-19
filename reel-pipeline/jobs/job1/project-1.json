@@ -3,7 +3,7 @@
  "width": 1080,
  "height": 1920,
  "fps": 30,
- "revision": 13,
+ "revision": 15,
  "panSchema": 1,
  "background": "#ffffff",
  "media": [
@@ -28,7 +28,8 @@
     "fit": "cover",
     "scale": 1.0,
     "x": 0,
-    "y": 0
+    "y": 0,
+    "volume": 0
    }
   },
   {
@@ -103,7 +104,8 @@
     "fit": "cover",
     "scale": 1.0,
     "x": 0,
-    "y": 0
+    "y": 0,
+    "volume": 0
    }
   },
   {
@@ -156,7 +158,8 @@
     "fit": "cover",
     "scale": 1.5,
     "x": 60,
-    "y": -96
+    "y": -96,
+    "volume": 0
    }
   },
   {
@@ -209,7 +212,8 @@
     "fit": "cover",
     "scale": 1.8,
     "x": 150,
-    "y": 375
+    "y": 375,
+    "volume": 0
    }
   },
   {
@@ -262,7 +266,8 @@
     "fit": "cover",
     "scale": 1.8,
     "x": 150,
-    "y": 375
+    "y": 375,
+    "volume": 0
    }
   },
   {
@@ -315,7 +320,8 @@
     "fit": "cover",
     "scale": 1.8,
     "x": 432,
-    "y": 0
+    "y": 0,
+    "volume": 0
    }
   },
   {
@@ -368,7 +374,8 @@
     "fit": "cover",
     "scale": 1.8,
     "x": 432,
-    "y": 0
+    "y": 0,
+    "volume": 0
    }
   },
   {
@@ -415,13 +422,14 @@
    "track": "V1",
    "start": 21.75,
    "in": 23.45,
-   "duration": 1.1,
+   "duration": 4.93,
    "linkGroup": "lg7",
    "props": {
     "fit": "cover",
     "scale": 2.0,
     "x": -540,
-    "y": -120
+    "y": -120,
+    "volume": 0
    }
   },
   {
@@ -431,7 +439,7 @@
    "track": "A1",
    "start": 21.75,
    "in": 23.45,
-   "duration": 1.1,
+   "duration": 4.93,
    "linkGroup": "lg7",
    "props": {
     "volume": 1,
@@ -445,7 +453,7 @@
    "kind": "text",
    "track": "V3",
    "start": 21.75,
-   "duration": 1.1,
+   "duration": 3.5,
    "props": {
     "font": "Arimo",
     "weight": 700,
@@ -462,64 +470,11 @@
    }
   },
   {
-   "id": "v8",
-   "mediaId": "m_r1",
-   "kind": "video",
-   "track": "V1",
-   "start": 22.85,
-   "in": 25.19,
-   "duration": 3.19,
-   "linkGroup": "lg8",
-   "props": {
-    "fit": "cover",
-    "scale": 2.0,
-    "x": -540,
-    "y": -120
-   }
-  },
-  {
-   "id": "a8",
-   "mediaId": "m_r1",
-   "kind": "audio",
-   "track": "A1",
-   "start": 22.85,
-   "in": 25.19,
-   "duration": 3.19,
-   "linkGroup": "lg8",
-   "props": {
-    "volume": 1,
-    "pan": 0,
-    "channelMode": "mono"
-   }
-  },
-  {
-   "id": "t8_0",
+   "id": "t7_1",
    "mediaId": null,
    "kind": "text",
    "track": "V3",
-   "start": 22.85,
-   "duration": 1.76,
-   "props": {
-    "font": "Arimo",
-    "weight": 700,
-    "fontSize": 56,
-    "color": "#ffffff",
-    "bgColor": "#004B06",
-    "bgOpacity": 1,
-    "textShadow": 0,
-    "strokeWidth": 0,
-    "lineHeight": 1.25,
-    "align": "center",
-    "y": 80,
-    "text": "Column + Row..."
-   }
-  },
-  {
-   "id": "t8_1",
-   "mediaId": null,
-   "kind": "text",
-   "track": "V3",
-   "start": 24.61,
+   "start": 25.25,
    "duration": 1.43,
    "props": {
     "font": "Arimo",
@@ -537,30 +492,31 @@
    }
   },
   {
-   "id": "v9",
+   "id": "v8",
    "mediaId": "m_r1",
    "kind": "video",
    "track": "V1",
-   "start": 26.04,
+   "start": 26.68,
    "in": 28.38,
    "duration": 1.57,
-   "linkGroup": "lg9",
+   "linkGroup": "lg8",
    "props": {
     "fit": "cover",
     "scale": 2.0,
     "x": -540,
-    "y": -120
+    "y": -120,
+    "volume": 0
    }
   },
   {
-   "id": "a9",
+   "id": "a8",
    "mediaId": "m_r1",
    "kind": "audio",
    "track": "A1",
-   "start": 26.04,
+   "start": 26.68,
    "in": 28.38,
    "duration": 1.57,
-   "linkGroup": "lg9",
+   "linkGroup": "lg8",
    "props": {
     "volume": 0,
     "pan": 0,
@@ -568,11 +524,11 @@
    }
   },
   {
-   "id": "t9_0",
+   "id": "t8_0",
    "mediaId": null,
    "kind": "text",
    "track": "V3",
-   "start": 26.04,
+   "start": 26.68,
    "duration": 1.57,
    "props": {
     "font": "Arimo",

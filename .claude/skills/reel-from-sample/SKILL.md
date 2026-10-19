@@ -82,6 +82,9 @@ when the MCP tools are loaded. Skeleton:
 - Shot timing: follow the sample's `shots[]`, snapped to `beats`; hero shot on `drop`.
 - 16:9 raw on 9:16: `fit:"cover"` crops the centre; shift framing with `x`
   (px from centre) or `scale` > 1. Check every shot's framing with a frame grab.
+- Audio: a video clip plays its own sound. To control a segment's sound separately
+  (mute a tail, duck), set the video clip's `volume:0` and add an `audio` clip with the
+  same `mediaId` / `in` / `duration` / `linkGroup` on A1. Otherwise both play.
 - Speech reels: keep the select's own audio (`volume:1`) on V1, music at
   `volume:0.15–0.25` on A1, or duck it with the `fablecut_auto_duck` MCP tool
   (the repo's `.mcp.json` registers the `fablecut_*` tools) — see "Audio mix". Captions: transcript words →
@@ -101,7 +104,10 @@ reel-pipeline/scripts/qc.sh <out.mp4> <sample.mp4>
 
 Export renders at roughly 1 frame/s here (no GPU): ~10 min for a 20 s reel.
 Run it with `run_in_background` and keep working on the next reel's plan.
-Compare the two sheets and the numbers against the brief (length, cut rhythm,
+Transcribe the export (`scripts/transcribe.py`) and read it: jump cuts in
+narration must still say what was intended, and muted parts must be silent. Word
+timestamps can be off by ~0.3 s, so verify a cut inside a sentence with a short
+IN–OUT test export before the full render. Compare the two sheets and the numbers against the brief (length, cut rhythm,
 caption look; export.sh normalizes audio to −14 LUFS, override with `LUFS=`). Fix and re-export rather than shipping a mismatch. Then copy
 `workspace/project.json` to `jobs/<job>/project-<n>.json`, send the MP4 with
 SendUserFile, and commit the brief + project snapshots.

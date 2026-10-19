@@ -75,10 +75,10 @@ Transcript: `work/R1.transcript.json`.
 | 15.45 → 17.15 | "These are referred to as columns." | 1.8× headers | ...are COLUMNS |
 | 17.30 → 21.05 | "…numbers going down the screen." | 1.8× row numbers | Numbers down the side... |
 | 21.20 → 23.15 | "These are referred to as rows." | 1.8× row numbers | ...are ROWS |
-| 23.45 → 24.55 + 25.19 → 28.38 | "The intersection of the · column and the row… cell E7." (stumble "columns" removed) | 2× E7 | Column + Row... → = Cell E7! |
+| 23.45 → 28.38 | "The intersection of the columns, column and the row… cell E7." (kept whole: a cut on the stumble removed "of the column") | 2× E7 | Column + Row... → = Cell E7! |
 | 28.38 → 29.95 (muted) | cut-off sentence dropped | 2× E7 | Send this to a friend who's new to Excel!! (share CTA, like the sample's) |
 
 ## Reels
 | # | length | output | notes / approximations |
 |---|---|---|---|
-| 1 | 27.6 s | `out/job1-reel1_reel_1080x1920.mp4` · `project-1.json` · `build_reel1.py` | caption font Arimo (Arial-metric) for the sample's Arial-bold look; no click SFX added (the source has its own) |
+| 1 | 28.25 s | `out/job1-reel1_reel_1080x1920.mp4` · `project-1.json` · `build_reel1.py` | caption font Arimo (Arial-metric) for the sample's Arial-bold look; no click SFX added (the source has its own) |
