@@ -81,4 +81,4 @@ Transcript: `work/R1.transcript.json`.
 ## Reels
 | # | length | output | notes / approximations |
 |---|---|---|---|
-| 1 | 28.25 s | `out/job1-reel1_reel_1080x1920.mp4` · `project-1.json` · `build_reel1.py` | caption font Arimo (Arial-metric) for the sample's Arial-bold look; no click SFX added (the source has its own) |
+| 1 | 28.25 s | `out/job1-reel1-v2.mp4` · `project-1.json` · `build_reel1.py` | caption font Arimo (Arial-metric) for the sample's Arial-bold look; no click SFX added (the source has its own) |
