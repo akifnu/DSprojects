@@ -1,8 +1,8 @@
 """Job 2: the full "Toh Zinda Ho Tum" poem over an endless ocean loop.
 
-The loop (workspace/media/ocean_loop50.mp4) has no transitions: frames 84-160 of the
-30 fps clip repeat with a hard cut 160 -> 84, the cut point where the next frame best
-matches the loop start relative to the boat's own motion (see build_loop.sh)."""
+The loop (workspace/media/ocean_loop50.mp4, from build_loop.sh → scripts/seamless_loop.py)
+has no transition: it repeats frames 6-131 with a hard cut, made invisible by spreading
+the end→start optical-flow and shading correction across the whole loop."""
 import json
 import subprocess
 import sys
