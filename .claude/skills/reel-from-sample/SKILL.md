@@ -13,6 +13,23 @@ timeline-frame features. Its full manual is
 `reel-pipeline/.fablecut/CLAUDE.md` — read sections from it with
 `grep -n "^## \|^### "` + `sed -n`, never the whole 140 KB file.
 
+## Fast path (default — deliver within 3 minutes)
+
+Once a job has a `style.json` (hook, CTA, caption look, zooms — written once from
+the sample brief), every new raw clip is ONE command, ~45 s for a 30 s 4K clip:
+
+```
+python3 reel-pipeline/scripts/autoreel.py <raw.mp4> reel-pipeline/jobs/<job>/style.json reel-pipeline/jobs/<job>/out/<name>.mp4
+```
+
+It preps a 720p copy ∥ transcribes, cuts per sentence with pauses trimmed, drops a
+cut-off final sentence and word stumbles, writes phrase captions in the job's
+style with the hook and CTA, alternates jump zooms, renders 720×1280 at −14 LUFS,
+and saves `<name>.project.json`. Then: `qc.sh` the result, glance at its sheet,
+SendUserFile. Do not hand-build timelines, preview frame by frame or re-render
+unless the user asks for a change. Hand edits = edit `<name>.project.json`, then
+`fast_render.py <name>.project.json <name>.mp4` (~10 s).
+
 ## 0. Setup (each session)
 
 ```
