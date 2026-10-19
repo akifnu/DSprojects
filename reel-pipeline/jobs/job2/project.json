@@ -1,0 +1,321 @@
+{
+ "name": "job2-poem",
+ "width": 720,
+ "height": 1280,
+ "fps": 30,
+ "revision": 1,
+ "panSchema": 1,
+ "background": "#000000",
+ "media": [
+  {
+   "id": "bg",
+   "name": "ocean_loop50.mp4",
+   "kind": "video",
+   "src": "/media/ocean_loop50.mp4"
+  },
+  {
+   "id": "poem",
+   "name": "poem.flac",
+   "kind": "audio",
+   "src": "/media/poem.flac"
+  }
+ ],
+ "clips": [
+  {
+   "id": "v",
+   "mediaId": "bg",
+   "kind": "video",
+   "track": "V1",
+   "start": 0,
+   "in": 0,
+   "duration": 50.02,
+   "props": {
+    "fit": "cover",
+    "volume": 0
+   }
+  },
+  {
+   "id": "a",
+   "mediaId": "poem",
+   "kind": "audio",
+   "track": "A1",
+   "start": 0,
+   "in": 0,
+   "duration": 50.02,
+   "props": {}
+  },
+  {
+   "id": "t0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 0.6,
+   "duration": 7.0,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Toh Zinda Ho Tum\n\u2014 Javed Akhtar"
+   }
+  },
+  {
+   "id": "t1",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 7.8,
+   "duration": 4.5,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Dilon mein tum apni\nbetaabiyan leke chal rahe ho"
+   }
+  },
+  {
+   "id": "t2",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 12.3,
+   "duration": 1.5,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "toh zinda ho tum"
+   }
+  },
+  {
+   "id": "t3",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 13.8,
+   "duration": 3.8,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Nazar mein khwabon ki\nbijliyan leke chal rahe ho"
+   }
+  },
+  {
+   "id": "t4",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 17.6,
+   "duration": 2.3,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "toh zinda ho tum"
+   }
+  },
+  {
+   "id": "t5",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 19.9,
+   "duration": 3.8,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Hawa ke jhokon ke jaise\naazad rehna seekho"
+   }
+  },
+  {
+   "id": "t6",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 23.7,
+   "duration": 4.6,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Tum ek dariya ke jaise\nlehron mein behna seekho"
+   }
+  },
+  {
+   "id": "t7",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 28.3,
+   "duration": 2.9,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Har ek lamhe se tum milo\nkhole apni baahein"
+   }
+  },
+  {
+   "id": "t8",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 31.2,
+   "duration": 3.5,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Har ek pal ek naya samaa\ndekhen yeh nigaahein"
+   }
+  },
+  {
+   "id": "t9",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 34.7,
+   "duration": 3.2,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Jo apni aankhon mein\nhairaniyan leke chal rahe ho"
+   }
+  },
+  {
+   "id": "t10",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 37.9,
+   "duration": 2.4,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "toh zinda ho tum"
+   }
+  },
+  {
+   "id": "t11",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 40.3,
+   "duration": 3.4,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "Dilon mein tum apni\nbetaabiyan leke chal rahe ho"
+   }
+  },
+  {
+   "id": "t12",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 43.7,
+   "duration": 4.8,
+   "props": {
+    "font": "Playfair Display",
+    "weight": 600,
+    "fontSize": 44,
+    "color": "#ffffff",
+    "textShadow": 0,
+    "strokeWidth": 3,
+    "strokeColor": "#0b1d2a",
+    "lineHeight": 1.3,
+    "align": "center",
+    "y": -400,
+    "text": "toh zinda ho tum"
+   }
+  }
+ ]
+}
