@@ -11,3 +11,4 @@ jobs/*/out/
 *.flac
 *.wav
 .models/
+__pycache__/

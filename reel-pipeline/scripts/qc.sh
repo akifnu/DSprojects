@@ -12,7 +12,7 @@ sheet() {
 report() {
   echo "== $1"
   ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,r_frame_rate -of compact "$1"
-  ffmpeg -hide_banner -nostats -i "$1" -af ebur128=peak=true -f null - 2>&1 | grep -A1 -E "^\s+(I:|True peak:)" | grep -E "I:|Peak:" | tail -2 | sed 's/^ */  /'
+  ffmpeg -hide_banner -nostats -i "$1" -vn -af ebur128=peak=true -f null - 2>&1 | grep -A1 -E "^\s+(I:|True peak:)" | grep -E "I:|Peak:" | tail -2 | sed 's/^ */  /'
   sheet "$1"
 }
 for f in "$@"; do report "$f"; done

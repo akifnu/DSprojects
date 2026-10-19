@@ -47,6 +47,14 @@ pills/stroke and the audio mix; it lists anything else it can't draw yet
 instead of rendering it wrong. FableCut's own export (a browser compositor) is
 not used. Without a GPU it ran at ~1 frame/s here.
 
+Exports log stage timings, probe each source once, and crop hidden source regions
+before scaling where alignment permits. CPU export retains the `fast` preset;
+try `CPU_PRESET=veryfast scripts/render.sh jobs/<job>/out` for a faster setting.
+`VIDEO_ENCODER=auto` checks NVIDIA NVENC and falls back to CPU when unavailable;
+`VIDEO_ENCODER=nvenc` requires a working GPU encoder. See
+[GPU_RENDERING.md](GPU_RENDERING.md) for cloud-worker setup, asset transfer,
+Docker commands, and validation. Filters still run on the CPU.
+
 **Transcription** uses NVIDIA Parakeet (English) from the sherpa-onnx GitHub
 release (~480 MB download on first setup), because `huggingface.co` is blocked.
 

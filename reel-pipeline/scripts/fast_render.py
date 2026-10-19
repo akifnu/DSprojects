@@ -1,10 +1,10 @@
 """Renders a FableCut project.json straight with ffmpeg — no browser.
 
-    python3 fast_render.py <project.json> <out.mp4> [--lufs -14]
+    python3 fast_render.py <project.json> <out.mp4> [--lufs -14] [--encoder cpu|auto|nvenc]
     python3 fast_render.py <project.json> <still.jpg> --frame <seconds>   (preview one frame)
 
 The browser export draws every frame in software here (~1 frame/s); this
-builds one ffmpeg filtergraph instead and runs at many times realtime. It
+builds one ffmpeg filtergraph instead. Speed depends on the sources and host. It
 covers what talking-head / screen-recording reels use:
 
   video/image clips  fit (cover/contain/stretch), static scale / x / y / opacity
@@ -18,12 +18,16 @@ speed, SVG, comps…) is listed and the script exits 2 — build the effect anot
 way (or add it here) rather than reaching for the editor's browser export.
 """
 import argparse
+from functools import lru_cache
+import io
 import json
+import math
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 
 from PIL import Image, ImageDraw, ImageFont
@@ -75,6 +79,7 @@ def probe(path):
     return {"w": v and v["width"], "h": v and v["height"], "audio": any(s["codec_type"] == "audio" for s in streams)}
 
 
+@lru_cache(maxsize=128)
 def font_file(family, weight):
     """A TTF for a Google Font family at a weight, cached in workspace/fonts."""
     os.makedirs(FONT_DIR, exist_ok=True)
@@ -83,16 +88,85 @@ def font_file(family, weight):
         return path
     try:
         url = f"https://fonts.googleapis.com/css2?family={family.replace(' ', '+')}:wght@{weight}"
-        css = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/4.0"})).read().decode()
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/4.0"}), timeout=5) as response:
+            css = response.read().decode()
         ttf = re.search(r"url\((https://[^)]+\.ttf)\)", css).group(1)
-        urllib.request.urlretrieve(ttf, path)
+        # Only publish a complete, usable font; cache fallback choices for this run too.
+        with urllib.request.urlopen(ttf, timeout=5) as response:
+            data = response.read()
+        ImageFont.truetype(io.BytesIO(data), 16)
+        with tempfile.TemporaryDirectory(dir=FONT_DIR) as download_dir:
+            downloaded = os.path.join(download_dir, "font.ttf")
+            with open(downloaded, "wb") as stream:
+                stream.write(data)
+            os.replace(downloaded, path)
         return path
     except Exception:
         lib = os.path.join(LIB_FONTS, f"{family}.woff2")
         if os.path.exists(lib):
             return lib
-        print(f"warning: font {family} unavailable, using Liberation Sans", file=sys.stderr)
-        return "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        style = "Bold" if weight >= 600 else "Regular"
+        for fallback in (f"/usr/share/fonts/truetype/liberation/LiberationSans-{style}.ttf",
+                         f"/usr/share/fonts/truetype/liberation2/LiberationSans-{style}.ttf",
+                         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+            if os.path.exists(fallback):
+                print(f"warning: font {family} unavailable, using {fallback}", file=sys.stderr)
+                return fallback
+        raise SystemExit(f"Font {family} unavailable; install fonts-liberation or cache its TTF in {FONT_DIR}")
+
+
+def visible_scale(iw, ih, ow, oh, x, y, W, H):
+    """Crop hidden source pixels without changing the scale ratio or chroma phase.
+
+    Keep a Lanczos border and snap crop boundaries to exact, even source/output
+    coordinates. Ratios with no useful aligned crop retain the original path.
+    """
+    def axis(source, scaled, origin, canvas):
+        if source % 2 or scaled <= 0 or origin >= canvas or origin + scaled <= 0:
+            return 0, source, 0, scaled
+        divisor = math.gcd(source, scaled)
+        step, out_step = source // divisor, scaled // divisor
+        if step % 2 or out_step % 2:
+            step *= 2
+        margin = math.ceil(4 / min(1, scaled / source))
+        start = max(0, math.floor((-origin * source / scaled - margin) / step) * step)
+        end = min(source, math.ceil(((canvas - origin) * source / scaled + margin) / step) * step)
+        if end <= start:
+            return 0, source, 0, scaled
+        return start, end - start, start * scaled // source, (end - start) * scaled // source
+
+    left, width, dx, sw = axis(iw, ow, x, W)
+    top, height, dy, sh = axis(ih, oh, y, H)
+    crop = f"crop={width}:{height}:{left}:{top}," if (width, height) != (iw, ih) else ""
+    return f"{crop}scale={sw}:{sh}:flags=lanczos", x + dx, y + dy
+
+
+def run_stage(name, cmd, **kwargs):
+    started = time.monotonic()
+    print(f"[render] {name}: started", file=sys.stderr, flush=True)
+    try:
+        return subprocess.run(cmd, check=True, **kwargs)
+    finally:
+        print(f"[render] {name}: {time.monotonic() - started:.2f}s", file=sys.stderr, flush=True)
+
+
+def select_encoder(requested):
+    if requested == "cpu":
+        return "cpu"
+    # An encoder listing alone does not prove that the driver/GPU works.
+    try:
+        run_stage("NVIDIA check", ["ffmpeg", "-v", "error", "-f", "lavfi", "-i",
+                  "color=s=64x64:r=25:d=0.04", "-frames:v", "1", "-c:v", "h264_nvenc",
+                  "-f", "null", "-"], capture_output=True, text=True, timeout=15)
+        return "nvenc"
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        if requested == "nvenc":
+            detail = getattr(error, "stderr", "") or str(error)
+            raise SystemExit(f"NVIDIA encoding unavailable: {detail}\n"
+                             "Check the GPU, driver, FFmpeg NVENC support and container video capability; "
+                             "use --encoder cpu or auto to allow CPU rendering.") from error
+        print("[render] NVIDIA unavailable; using CPU encoding", file=sys.stderr)
+        return "cpu"
 
 
 def hex_rgba(h, a=1.0):
@@ -155,8 +229,23 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--lufs", type=float, default=-14)
     ap.add_argument("--frame", type=float, help="render only the picture at this time, as a still")
+    ap.add_argument("--encoder", choices=("cpu", "auto", "nvenc"), default=os.getenv("VIDEO_ENCODER", "cpu"))
+    ap.add_argument("--cpu-preset", default=os.getenv("CPU_PRESET", "fast"))
+    ap.add_argument("--nvenc-preset", choices=tuple(f"p{i}" for i in range(1, 8)), default="p4")
+    ap.add_argument("--nvenc-cq", type=int, choices=range(0, 52), default=19)
+    ap.add_argument("--threads", type=int, default=int(os.getenv("RENDER_THREADS", "0")),
+                    help="FFmpeg decoder/filter/encoder threads; 0 uses FFmpeg defaults")
     a = ap.parse_args()
-    proj = json.load(open(a.project))
+    if a.threads < 0:
+        ap.error("--threads must be nonnegative")
+    with open(a.project) as project_file:
+        proj = json.load(project_file)
+    with tempfile.TemporaryDirectory(prefix="fastrender-") as tmp:
+        render_project(proj, a, tmp)
+
+
+def render_project(proj, a, tmp):
+    started = time.monotonic()
     W, H, fps = proj["width"], proj["height"], proj.get("fps", 30)
     media = {m["id"]: m for m in proj.get("media", [])}
     off = set(proj.get("disabledTracks") or [])
@@ -174,16 +263,28 @@ def main():
     if problems:
         print("fast_render can't render these props / features yet:\n  " + "\n  ".join(problems), file=sys.stderr)
         sys.exit(2)
+    encoder = select_encoder(a.encoder) if a.frame is None else "cpu"
+    preparation_started = time.monotonic()
     if a.frame is not None:  # a still needs only the pictures on screen then
         clips = [c for c in clips if c["kind"] != "audio" and c["start"] <= a.frame < c["start"] + c["duration"]]
 
-    tmp = tempfile.mkdtemp(prefix="fastrender-")
     probes = {}
-    inputs, vf, af, alabels = [], [], [], []
+    inputs, audio_inputs, vf, af, alabels = [], [], [], [], []
+    thread_args = ["-threads", str(a.threads)] if a.threads else []
+    ffmpeg = ["ffmpeg", "-loglevel", "error", "-y"]
+    if a.threads:
+        ffmpeg += ["-filter_complex_threads", str(a.threads)]
 
-    def add_input(args):
-        inputs.extend(args)
-        return sum(1 for x in inputs if x == "-i") - 1
+    def cached_probe(path):
+        if path not in probes:
+            probes[path] = probe(path)
+        return probes[path]
+
+    def add_input(args, target=None):
+        target = inputs if target is None else target
+        index = target.count("-i")
+        target.extend(thread_args + args)
+        return index
 
     # picture: lower tracks first, V3 over V2 over V1
     def track_no(c):
@@ -202,7 +303,7 @@ def main():
             vf.append(f"[{last}][{k}:v]overlay=0:0:enable='{enable}'[o{n}]")
         else:
             path = media_path(media[c["mediaId"]]["src"])
-            info = probes.setdefault(path, probe(path))
+            info = cached_probe(path)
             if c["kind"] == "image":
                 k = add_input(["-loop", "1", "-t", f"{c['duration']:.3f}", "-i", path])
             else:
@@ -215,8 +316,9 @@ def main():
                 ow, oh = info["w"] * f * sc, info["h"] * f * sc
             ow, oh = 2 * round(ow / 2), 2 * round(oh / 2)
             x, y = round(W / 2 + p.get("x", 0) - ow / 2), round(H / 2 + p.get("y", 0) - oh / 2)
+            transform, x, y = visible_scale(info["w"], info["h"], ow, oh, x, y, W, H)
             alpha = f",format=rgba,colorchannelmixer=aa={p['opacity']}" if p.get("opacity", 1) < 1 else ""
-            vf.append(f"[{k}:v]fps={fps},scale={ow}:{oh}:flags=lanczos,setsar=1{alpha},"
+            vf.append(f"[{k}:v]fps={fps},{transform},setsar=1{alpha},"
                       f"setpts=PTS-STARTPTS+{s:.3f}/TB[c{n}]")
             vf.append(f"[{last}][c{n}]overlay={x}:{y}:eof_action=pass:enable='{enable}'[o{n}]")
         last = f"o{n}"
@@ -226,11 +328,13 @@ def main():
     for n, c in enumerate(c for c in clips if c["kind"] in ("audio", "video") and a.frame is None):
         p = c.get("props") or {}
         vol = p.get("volume", 1) * 10 ** (p.get("gain", 0) / 20)
-        path = media_path(media[c["mediaId"]]["src"])
-        info = probes.setdefault(path, probe(path))
-        if vol == 0 or not info["audio"]:
+        if vol == 0:
             continue
-        k = add_input(["-ss", f"{c.get('in', 0):.3f}", "-t", f"{c['duration']:.3f}", "-i", path])
+        path = media_path(media[c["mediaId"]]["src"])
+        info = cached_probe(path)
+        if not info["audio"]:
+            continue
+        k = add_input(["-vn", "-ss", f"{c.get('in', 0):.3f}", "-t", f"{c['duration']:.3f}", "-i", path], audio_inputs)
         mono = "aformat=channel_layouts=mono," if p.get("channelMode") == "mono" else ""
         ms = round(c["start"] * 1000)
         af.append(f"[{k}:a]{mono}aformat=sample_rates=48000:channel_layouts=stereo,volume={vol},"
@@ -238,13 +342,16 @@ def main():
         alabels.append(f"[a{n}]")
     if af:
         af.append(f"{''.join(alabels)}amix=inputs={len(alabels)}:normalize=0:duration=longest,atrim=0:{total:.3f}[aout]")
+    print(f"[render] preparation: {time.monotonic() - preparation_started:.2f}s; "
+          f"{len(probes)} unique media probes, {inputs.count('-i')} visual inputs, "
+          f"{audio_inputs.count('-i')} audio inputs", file=sys.stderr, flush=True)
 
     # pass 1: the mix to WAV, measured
     wav = os.path.join(tmp, "mix.wav")
     if af:
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *inputs, "-filter_complex", ";".join(af),
-                        "-map", "[aout]", "-t", f"{total:.3f}", wav], check=True)
-        m = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", wav, "-af",
+        run_stage("audio mix", [*ffmpeg, *audio_inputs, "-filter_complex", ";".join(af),
+                        "-map", "[aout]", "-t", f"{total:.3f}", wav])
+        m = run_stage("loudness analysis", ["ffmpeg", "-hide_banner", "-nostats", "-i", wav, "-vn", "-af",
                             f"loudnorm=I={a.lufs}:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
                            capture_output=True, text=True).stderr
         j = json.loads(m[m.rindex("{"):])
@@ -253,13 +360,15 @@ def main():
                 f"linear=true,aresample=48000")
 
     if a.frame is not None:
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *inputs, "-filter_complex", ";".join(vf),
-                        "-map", "[vout]", "-ss", f"{a.frame:.3f}", "-frames:v", "1", "-q:v", "3", a.out], check=True)
+        run_stage("preview", [*ffmpeg, *inputs, "-filter_complex", ";".join(vf),
+                        "-map", "[vout]", "-ss", f"{a.frame:.3f}", "-frames:v", "1", *thread_args,
+                        "-q:v", "3", a.out])
         print(a.out)
         return
 
     # pass 2: picture + normalized mix
-    cmd = ["ffmpeg", "-loglevel", "error", "-y", *inputs]
+    print(f"[render] video encoder: {encoder}", file=sys.stderr, flush=True)
+    cmd = [*ffmpeg, *inputs]
     if af:
         cmd += ["-i", wav]
         wi = sum(1 for x in cmd if x == "-i") - 1
@@ -267,11 +376,16 @@ def main():
     cmd += ["-filter_complex", ";".join(vf), "-map", "[vout]"]
     if af:
         cmd += ["-map", "[anorm]", "-c:a", "aac", "-b:a", "256k", "-ar", "48000"]
-    cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "19", "-maxrate", "25M", "-bufsize", "50M",
+    if encoder == "nvenc":
+        cmd += ["-c:v", "h264_nvenc", "-preset", a.nvenc_preset, "-rc", "vbr", "-cq", str(a.nvenc_cq), "-b:v", "0"]
+    else:
+        cmd += ["-c:v", "libx264", "-preset", a.cpu_preset, "-crf", "19"]
+    cmd += [*thread_args, "-maxrate", "25M", "-bufsize", "50M",
             "-pix_fmt", "yuv420p", "-r", str(fps), "-g", str(round(fps)), "-movflags", "+faststart",
             "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
             "-t", f"{total:.3f}", a.out]
-    subprocess.run(cmd, check=True)
+    run_stage("video render + audio normalization", cmd)
+    print(f"[render] total: {time.monotonic() - started:.2f}s", file=sys.stderr, flush=True)
     print(a.out)
 
 
