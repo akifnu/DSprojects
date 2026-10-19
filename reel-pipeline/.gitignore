@@ -10,3 +10,4 @@ jobs/*/out/
 *.m4a
 *.flac
 *.wav
+.models/

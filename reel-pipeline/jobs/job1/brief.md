@@ -58,10 +58,27 @@ no separate end card.
 5. "That's it!" → payoff shot with the result caption.
 6. Share CTA caption over the result (~2.5 s). Total 20–30 s.
 
-## Selects
-| reel | raw file | in → out | why |
+## Raw footage
+R1 (`VID-20260925-WA0012.mp4`): 30 s, 2160×3840 @ 60, HEVC, already 9:16. Excel basics
+screen recording (open a blank workbook → cells → columns → rows → cell E7) with
+voice-over at −24.7 LUFS. The narration is cut off mid-sentence at 29.9 s. The opening
+start-screen transition is smeared in the source (low-bitrate recompression).
+Transcript: `work/R1.transcript.json`.
+
+## Selects (reel 1; times in R1)
+| in → out | VO | punch-in | caption |
 |---|---|---|---|
+| 0.20 → 4.25 | "New workbook. This drops us into a brand new workbook." | wide | hook "Excel Basics EVERY Beginner Must Know!!" → "Open a Blank Workbook" |
+| 4.35 → 9.40 | "…a lot of rectangles on the screen." | wide | See all these rectangles? |
+| 9.78 → 12.15 | "These are all referred to as cells." | 1.5× grid | These are CELLS |
+| 12.32 → 15.20 | "Across the top… letters." | 1.8× headers | Letters across the top... |
+| 15.45 → 17.15 | "These are referred to as columns." | 1.8× headers | ...are COLUMNS |
+| 17.30 → 21.05 | "…numbers going down the screen." | 1.8× row numbers | Numbers down the side... |
+| 21.20 → 23.15 | "These are referred to as rows." | 1.8× row numbers | ...are ROWS |
+| 23.45 → 24.55 + 25.19 → 28.38 | "The intersection of the · column and the row… cell E7." (stumble "columns" removed) | 2× E7 | Column + Row... → = Cell E7! |
+| 28.38 → 29.95 (muted) | cut-off sentence dropped | 2× E7 | Send this to a friend who's new to Excel!! (share CTA, like the sample's) |
 
 ## Reels
-| # | length | selects used | output | notes / approximations |
-|---|---|---|---|---|
+| # | length | output | notes / approximations |
+|---|---|---|---|
+| 1 | 27.6 s | `out/job1-reel1_reel_1080x1920.mp4` · `project-1.json` · `build_reel1.py` | caption font Arimo (Arial-metric) for the sample's Arial-bold look; no click SFX added (the source has its own) |

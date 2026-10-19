@@ -27,12 +27,12 @@ agent-drivable, JSON-timeline video editor; pinned to v1.15.0).
 
 | path | what |
 |---|---|
-| `setup.sh` | installs FableCut (pinned) into `.fablecut/` and faster-whisper; idempotent, run by the SessionStart hook |
+| `setup.sh` | installs FableCut (pinned) into `.fablecut/`, sherpa-onnx and the Parakeet speech model into `.models/`; idempotent, run by the SessionStart hook |
 | `fablecut.sh` | runs a FableCut entry point with `FABLECUT_DATA_DIR=workspace/` and the Chromium wrapper |
 | `scripts/start.sh` | starts the editor server on :7777 |
 | `scripts/survey.sh` | scene list + time-stamped contact sheets of long footage |
 | `scripts/prep.sh` | trims a select and converts it to browser-safe WebM (VP9/Opus) or FLAC |
-| `scripts/transcribe.py` | word-level transcript (faster-whisper) for speech-led reels and captions |
+| `scripts/transcribe.py` | word-level English transcript (Parakeet via sherpa-onnx) for speech-led reels and captions |
 | `scripts/export.sh` | headless render of the timeline → `jobs/<job>/out/` |
 | `scripts/qc.sh` | format, duration, loudness and contact sheet of a reel vs. its sample |
 | `scripts/chrome.sh` | Chromium wrapper (`--no-sandbox` as root, software GL) |
@@ -46,9 +46,8 @@ agent-drivable, JSON-timeline video editor; pinned to v1.15.0).
 - **No GPU** → export renders about 1 frame/s (a 20 s reel ≈ 10 min). On your
   own machine with Chrome, `npx -y fablecut` renders far faster, and the same
   `project.json` opens there in the UI for hand tweaks.
-- **Transcription** downloads Whisper models from `huggingface.co`; allow that
-  host in the environment's network settings to enable speech-based selects
-  and auto-captions.
+- **Transcription** uses NVIDIA Parakeet (English) from the sherpa-onnx GitHub
+  release (~480 MB download on first setup), because `huggingface.co` is blocked.
 
 ## Run it locally with the editor UI
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the reel pipeline's tools: FableCut (pinned), faster-whisper.
+# Installs the reel pipeline's tools: FableCut (pinned), sherpa-onnx + Parakeet speech model.
 # Idempotent — safe to run at the start of every session.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +14,15 @@ if [ "$(git -C "$FC" rev-parse HEAD)" != "$FABLECUT_REF" ]; then
   git -C "$FC" checkout --quiet "$FABLECUT_REF"
 fi
 
-python3 -c "import faster_whisper" 2>/dev/null || pip install -q faster-whisper
+python3 -c "import sherpa_onnx" 2>/dev/null || pip install -q sherpa-onnx
+
+# Speech model for scripts/transcribe.py (GitHub release; huggingface.co is often blocked)
+ASR="parakeet-tdt-0.6b-v2-int8"
+if [ ! -f "$HERE/.models/sherpa-onnx-nemo-$ASR/encoder.int8.onnx" ]; then
+  mkdir -p "$HERE/.models"
+  curl -sSL "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-$ASR.tar.bz2" \
+    | tar xj -C "$HERE/.models" || echo "WARNING: speech model download failed; transcription unavailable" >&2
+fi
 
 mkdir -p "$HERE/workspace"
 for t in node ffmpeg ffprobe; do command -v "$t" >/dev/null || echo "WARNING: $t not on PATH" >&2; done

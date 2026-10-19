@@ -1,0 +1,593 @@
+{
+ "name": "job1-reel1",
+ "width": 1080,
+ "height": 1920,
+ "fps": 30,
+ "revision": 13,
+ "panSchema": 1,
+ "background": "#ffffff",
+ "media": [
+  {
+   "id": "m_r1",
+   "name": "R1.webm",
+   "kind": "video",
+   "src": "/media/R1.webm"
+  }
+ ],
+ "clips": [
+  {
+   "id": "v0",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 0.0,
+   "in": 0.2,
+   "duration": 4.05,
+   "linkGroup": "lg0",
+   "props": {
+    "fit": "cover",
+    "scale": 1.0,
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "id": "a0",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 0.0,
+   "in": 0.2,
+   "duration": 4.05,
+   "linkGroup": "lg0",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t0_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 0.0,
+   "duration": 2.0,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Excel Basics EVERY\nBeginner Must Know!!"
+   }
+  },
+  {
+   "id": "t0_1",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 2.0,
+   "duration": 2.05,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Open a Blank Workbook"
+   }
+  },
+  {
+   "id": "v1",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 4.05,
+   "in": 4.35,
+   "duration": 5.05,
+   "linkGroup": "lg1",
+   "props": {
+    "fit": "cover",
+    "scale": 1.0,
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "id": "a1",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 4.05,
+   "in": 4.35,
+   "duration": 5.05,
+   "linkGroup": "lg1",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t1_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 4.05,
+   "duration": 5.05,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "See all these rectangles?"
+   }
+  },
+  {
+   "id": "v2",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 9.1,
+   "in": 9.78,
+   "duration": 2.37,
+   "linkGroup": "lg2",
+   "props": {
+    "fit": "cover",
+    "scale": 1.5,
+    "x": 60,
+    "y": -96
+   }
+  },
+  {
+   "id": "a2",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 9.1,
+   "in": 9.78,
+   "duration": 2.37,
+   "linkGroup": "lg2",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t2_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 9.1,
+   "duration": 2.37,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "These are CELLS"
+   }
+  },
+  {
+   "id": "v3",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 11.47,
+   "in": 12.32,
+   "duration": 2.88,
+   "linkGroup": "lg3",
+   "props": {
+    "fit": "cover",
+    "scale": 1.8,
+    "x": 150,
+    "y": 375
+   }
+  },
+  {
+   "id": "a3",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 11.47,
+   "in": 12.32,
+   "duration": 2.88,
+   "linkGroup": "lg3",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t3_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 11.47,
+   "duration": 2.88,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Letters across the top..."
+   }
+  },
+  {
+   "id": "v4",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 14.35,
+   "in": 15.45,
+   "duration": 1.7,
+   "linkGroup": "lg4",
+   "props": {
+    "fit": "cover",
+    "scale": 1.8,
+    "x": 150,
+    "y": 375
+   }
+  },
+  {
+   "id": "a4",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 14.35,
+   "in": 15.45,
+   "duration": 1.7,
+   "linkGroup": "lg4",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t4_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 14.35,
+   "duration": 1.7,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "...are COLUMNS"
+   }
+  },
+  {
+   "id": "v5",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 16.05,
+   "in": 17.3,
+   "duration": 3.75,
+   "linkGroup": "lg5",
+   "props": {
+    "fit": "cover",
+    "scale": 1.8,
+    "x": 432,
+    "y": 0
+   }
+  },
+  {
+   "id": "a5",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 16.05,
+   "in": 17.3,
+   "duration": 3.75,
+   "linkGroup": "lg5",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t5_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 16.05,
+   "duration": 3.75,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Numbers down the side..."
+   }
+  },
+  {
+   "id": "v6",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 19.8,
+   "in": 21.2,
+   "duration": 1.95,
+   "linkGroup": "lg6",
+   "props": {
+    "fit": "cover",
+    "scale": 1.8,
+    "x": 432,
+    "y": 0
+   }
+  },
+  {
+   "id": "a6",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 19.8,
+   "in": 21.2,
+   "duration": 1.95,
+   "linkGroup": "lg6",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t6_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 19.8,
+   "duration": 1.95,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "...are ROWS"
+   }
+  },
+  {
+   "id": "v7",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 21.75,
+   "in": 23.45,
+   "duration": 1.1,
+   "linkGroup": "lg7",
+   "props": {
+    "fit": "cover",
+    "scale": 2.0,
+    "x": -540,
+    "y": -120
+   }
+  },
+  {
+   "id": "a7",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 21.75,
+   "in": 23.45,
+   "duration": 1.1,
+   "linkGroup": "lg7",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t7_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 21.75,
+   "duration": 1.1,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Column + Row..."
+   }
+  },
+  {
+   "id": "v8",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 22.85,
+   "in": 25.19,
+   "duration": 3.19,
+   "linkGroup": "lg8",
+   "props": {
+    "fit": "cover",
+    "scale": 2.0,
+    "x": -540,
+    "y": -120
+   }
+  },
+  {
+   "id": "a8",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 22.85,
+   "in": 25.19,
+   "duration": 3.19,
+   "linkGroup": "lg8",
+   "props": {
+    "volume": 1,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t8_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 22.85,
+   "duration": 1.76,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Column + Row..."
+   }
+  },
+  {
+   "id": "t8_1",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 24.61,
+   "duration": 1.43,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "= Cell E7!"
+   }
+  },
+  {
+   "id": "v9",
+   "mediaId": "m_r1",
+   "kind": "video",
+   "track": "V1",
+   "start": 26.04,
+   "in": 28.38,
+   "duration": 1.57,
+   "linkGroup": "lg9",
+   "props": {
+    "fit": "cover",
+    "scale": 2.0,
+    "x": -540,
+    "y": -120
+   }
+  },
+  {
+   "id": "a9",
+   "mediaId": "m_r1",
+   "kind": "audio",
+   "track": "A1",
+   "start": 26.04,
+   "in": 28.38,
+   "duration": 1.57,
+   "linkGroup": "lg9",
+   "props": {
+    "volume": 0,
+    "pan": 0,
+    "channelMode": "mono"
+   }
+  },
+  {
+   "id": "t9_0",
+   "mediaId": null,
+   "kind": "text",
+   "track": "V3",
+   "start": 26.04,
+   "duration": 1.57,
+   "props": {
+    "font": "Arimo",
+    "weight": 700,
+    "fontSize": 56,
+    "color": "#ffffff",
+    "bgColor": "#004B06",
+    "bgOpacity": 1,
+    "textShadow": 0,
+    "strokeWidth": 0,
+    "lineHeight": 1.25,
+    "align": "center",
+    "y": 80,
+    "text": "Send this to a friend\nwho's new to Excel!!"
+   }
+  }
+ ]
+}
