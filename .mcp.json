@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "fablecut": {
+      "command": "bash",
+      "args": ["reel-pipeline/fablecut.sh", "mcp-server.js"]
+    }
+  }
+}

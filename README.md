@@ -10,3 +10,4 @@ Data science project collection.
 | [`perfumerecom/`](perfumerecom/readme.md) | Mood-based perfume recommender |
 | [`GHGAI/`](GHGAI/readme.md) | Agentic CO₂ accounting architecture |
 | [`Double_Jeopardy/`](Double_Jeopardy/) | Double Jeopardy law analysis |
+| [`reel-pipeline/`](reel-pipeline/README.md) | Sample reel + raw footage → finished reels, edited by Claude with FableCut |
