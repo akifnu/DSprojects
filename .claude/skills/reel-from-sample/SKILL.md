@@ -5,9 +5,11 @@ description: Turn raw long footage into finished vertical reels that follow a sa
 
 # Reel from sample
 
-The pipeline lives in `reel-pipeline/` (see its README). FableCut is the editor:
-a JSON timeline (`reel-pipeline/workspace/project.json`) rendered by a browser
-compositor and encoded by ffmpeg. Its full manual is
+The pipeline lives in `reel-pipeline/` (see its README). FableCut provides the
+edit format (a JSON timeline, `reel-pipeline/workspace/project.json`) and the
+sample analyzer. **Rendering is ffmpeg-only** (`scripts/render.sh` →
+`scripts/fast_render.py`): never use the editor's headless-browser export or
+timeline-frame features. Its full manual is
 `reel-pipeline/.fablecut/CLAUDE.md` — read sections from it with
 `grep -n "^## \|^### "` + `sed -n`, never the whole 140 KB file.
 
@@ -53,12 +55,10 @@ or end card. This is the spec every reel is checked against.
   lines (hook first). Picture-led footage: pick moments that match each sample
   shot's energy (calm ≤ 40, action ≥ 70).
 - Record selects in the brief as `raw file · in → out · why`.
-- Cut each select (with ~0.5 s handles) to a browser-safe file:
+- Copy raw files into `workspace/media/`; the timeline can use them directly
+  (any codec ffmpeg reads). For heavy footage (4K, HEVC, 60 fps, long), make a
+  lighter 1080p/30 copy of just the selects:
   `scripts/prep.sh <raw> <select-name> <in> <out>` → prints its `/media/…` src.
-  Music / voice-over audio: `scripts/prep.sh <file> <name>` → FLAC.
-  **The container's headless Chromium cannot decode H.264/AAC; every file on the
-  timeline must go through prep.sh** (WebM/VP9/Opus or FLAC). Prep selects,
-  not whole long files.
 
 ## 4. Build the timeline
 
@@ -69,13 +69,13 @@ when the MCP tools are loaded. Skeleton:
 ```jsonc
 { "name":"<job>-<n>", "width":1080, "height":1920, "fps":30, "revision":N, "panSchema":1,
   "background":"#000000", "markers":[{"t":<beat>}…, {"t":<drop>,"label":"drop","color":"red"}],
-  "media":[{"id":"m_s1","name":"s1.webm","kind":"video","src":"/media/s1.webm"}, …],
+  "media":[{"id":"m_s1","name":"s1.mp4","kind":"video","src":"/media/s1.mp4"}, …],
   "clips":[
     {"id":"v1","mediaId":"m_s1","kind":"video","track":"V1","start":0,"in":0.5,"duration":1.8,
      "props":{"fit":"cover","volume":0}},
     {"id":"mus","mediaId":"m_music","kind":"audio","track":"A1","start":0,"in":0,"duration":<len>},
     {"id":"cap1","mediaId":null,"kind":"text","track":"V3","start":0.2,"duration":1.6,
-     "props":{"text":"…","font":"Montserrat","fontSize":80,"textAnim":"word-pop","strokeWidth":6,"y":420}}
+     "props":{"text":"…","font":"Montserrat","fontSize":80,"textShadow":0,"strokeWidth":6,"y":420}}
   ]}
 ```
 
@@ -89,26 +89,29 @@ when the MCP tools are loaded. Skeleton:
   `volume:0.15–0.25` on A1, or duck it with the `fablecut_auto_duck` MCP tool
   (the repo's `.mcp.json` registers the `fablecut_*` tools) — see "Audio mix". Captions: transcript words →
   `.fablecut/examples/auto-captions/auto_captions.py`, then restyle to the brief.
-- Look: `filterPreset`, `props.grade` (manual "Color"), `keyframes.scale` for
-  push-ins, `keyframes.speed` for ramps, adjust layers for impact frames
-  (manual "Recipes", "Remake a reference video").
-- Check the composed picture before exporting: a 1–2 s test export, or frame grabs
-  of each select at its `in`.
+- **What the ffmpeg renderer draws** (see `scripts/fast_render.py` docstring): cuts;
+  static `fit` / `scale` / `x` / `y` / `opacity` (punch-ins are hard-cut zooms, as in
+  most tutorial reels); audio `volume` / `gain` / mono; text with font, weight, size,
+  colour, per-line pill, stroke, `textShadow:0`. It refuses anything else (keyframes,
+  grades, transitions, textAnim, speed…) with a list. When a sample needs one of
+  those, add it to `fast_render.py` (ffmpeg has zoompan, xfade, eq/curves, setpts)
+  and check it against the sample — don't fall back to a browser.
+- Look at the composed picture before rendering:
+  `scripts/render.sh --frame <t> <still.jpg>` (~5 s each) for every shot.
 
-## 5. Export and QC
+## 5. Render and QC
 
 ```
-reel-pipeline/scripts/export.sh reel-pipeline/jobs/<job>/out instagram-reels
+reel-pipeline/scripts/render.sh reel-pipeline/jobs/<job>/out [name]
 reel-pipeline/scripts/qc.sh <out.mp4> <sample.mp4>
 ```
 
-Export renders at roughly 1 frame/s here (no GPU): ~10 min for a 20 s reel.
-Run it with `run_in_background` and keep working on the next reel's plan.
-Transcribe the export (`scripts/transcribe.py`) and read it: jump cuts in
+A 30 s reel renders in about a minute (1080×1920 H.264 CRF 19, AAC 256k,
+two-pass loudnorm to −14 LUFS; `LUFS=` overrides). Transcribe the render (`scripts/transcribe.py`) and read it: jump cuts in
 narration must still say what was intended, and muted parts must be silent. Word
-timestamps can be off by ~0.3 s, so verify a cut inside a sentence with a short
-IN–OUT test export before the full render. Compare the two sheets and the numbers against the brief (length, cut rhythm,
-caption look; export.sh normalizes audio to −14 LUFS, override with `LUFS=`). Fix and re-export rather than shipping a mismatch. Then copy
+timestamps can be off by ~0.3 s, so check every cut inside a sentence in the
+transcript. Compare the two sheets and the numbers against the brief (length,
+cut rhythm, caption look, loudness). Fix and re-render rather than shipping a mismatch. Then copy
 `workspace/project.json` to `jobs/<job>/project-<n>.json`, send the MP4 with
 SendUserFile, and commit the brief + project snapshots.
 
