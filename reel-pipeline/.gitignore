@@ -12,3 +12,6 @@ jobs/*/out/
 *.wav
 .models/
 __pycache__/
+jobs/*/audio/
+*.mp3
+*.m4a
