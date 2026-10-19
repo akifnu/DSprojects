@@ -1,0 +1,13 @@
+.fablecut/
+workspace/
+jobs/*/samples/
+jobs/*/raw/
+jobs/*/work/
+jobs/*/out/
+*.mp4
+*.mov
+*.webm
+*.m4a
+*.flac
+*.wav
+.models/
