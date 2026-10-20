@@ -1,13 +1,62 @@
-# Render/batch worker for reelkit (CPU; on NVIDIA hosts pass --gpus all and use encoder=nvenc).
-FROM ubuntu:24.04
-ENV DEBIAN_FRONTEND=noninteractive NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+# reelkit media worker: the `reel` CLI (ingest, sample analysis, ASR, compile, render, QC, batch and
+# the detached job worker) with what it needs baked in: ffmpeg 9 (static build with NVENC), the
+# pinned Python packages, the ASR / VAD / face models (sha-256 recorded in .models/CHECKSUMS) and
+# the font matcher's Google Fonts, so a prewarmed render reaches no download endpoint.
+#
+# It packages the media CLI, not the Claude Code controller: the agents and the saved workflow
+# (.claude/) run in a Claude Code session that calls `reel` in this image (or on the same host with
+# the same data volume). Supply that runtime separately.
+#
+#   docker build -f reel-pipeline/Dockerfile.render -t reelkit reel-pipeline
+#   docker run --rm --gpus all -v /srv/reel-data:/data -v /srv/inputs:/inputs:ro reelkit \
+#       check --encoder nvenc --require-gpu      # a real NVENC encode, not an encoder listing
+#   docker run --rm --gpus all -v /srv/reel-data:/data -v /srv/inputs:/inputs:ro reelkit job …
+#
+# NVENC needs only the host driver: the NVIDIA container toolkit mounts it for the compute,
+# utility and video capabilities below (no display). CUDA ASR (--build-arg REELKIT_GPU=1:
+# requirements-gpu.txt) also needs CUDA and cuDNN runtime libraries matching the CUDA build of
+# sherpa-onnx: build it on an nvidia/cuda …-cudnn-runtime-ubuntu24.04 image with --build-arg BASE.
+#
+# BASE is pinned by tag; for deployment pin it by digest (BASE=ubuntu:24.04@sha256:<digest>, from
+# `docker buildx imagetools inspect ubuntu:24.04`) and record the digest of the image you deploy.
+ARG BASE=ubuntu:24.04
+FROM ${BASE}
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,video \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-pip curl ca-certificates xz-utils bzip2 fonts-liberation fonts-dejavu-core \
+      python3 python3-pip curl ca-certificates xz-utils bzip2 util-linux fonts-liberation fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/reel-pipeline
-COPY requirements.txt setup.sh reel ./
+
+# ffmpeg, Python packages and models: downloaded to temp files, verified, renamed into place.
+# This layer is independent of the code, so code changes do not download them again.
+COPY requirements.txt requirements-gpu.txt setup.sh ./
+ARG REELKIT_GPU=0
+RUN if [ "$REELKIT_GPU" = 1 ]; then ./setup.sh --no-check --gpu; else ./setup.sh --no-check; fi
+
+COPY reel ./
 COPY reelkit ./reelkit
 COPY library ./library
-RUN pip install --break-system-packages --no-cache-dir -r requirements.txt && ./setup.sh
-ENV REELKIT_DATA=/data
+
+# The font matcher's candidates (sample_text.CANDIDATES x WEIGHTS) into library/fonts, which
+# captions.font_file reads before the data/fonts cache or the network. Not fatal: a font that
+# cannot be fetched now is fetched on first use (or substituted, with REELKIT_OFFLINE=1).
+RUN REELKIT_DATA=/tmp/fontwarm python3 -c "import shutil; from pathlib import Path; \
+from reelkit import captions as c, sample_text as s; d = Path('library/fonts'); d.mkdir(exist_ok=True); \
+got = [(f, w, c.font_file(f, w)) for f in s.CANDIDATES for w in s.WEIGHTS]; \
+[shutil.copyfile(p, d / f'{f}-{w}.ttf') for f, w, p in got if p not in c.FALLBACKS]; \
+print(sum(p not in c.FALLBACKS for _, _, p in got), 'of', len(got), 'fonts in library/fonts')" \
+    || echo "font prewarm incomplete: the missing fonts download on first use"; \
+    rm -rf /tmp/fontwarm
+
+# The service user owns only the data volume; tools, packages, models and code stay read-only.
+RUN useradd --create-home --uid 10001 reel && mkdir -p /data && chown reel /data
+ENV REELKIT_DATA=/data \
+    REELKIT_PREBUILT=1
+USER reel
+# readiness as the service user (imports, ffmpeg, filters, models, fonts, /data); fails the build.
+# The builder's free disk says nothing about the data volume's, hence REELKIT_MIN_FREE_GB=0 here.
+RUN REELKIT_MIN_FREE_GB=0 ./setup.sh --check
 ENTRYPOINT ["./reel"]

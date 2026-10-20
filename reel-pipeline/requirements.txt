@@ -1,4 +1,5 @@
-# reelkit — pinned to the versions the test suite was run against
+# reelkit: pinned to the versions the test suite was run against (setup.sh installs and checks them;
+# `reel check` reports drift). GPU profile on top: requirements-gpu.txt (setup.sh --gpu).
 numpy==2.5.3
 scipy==1.18.1
 opencv-python-headless==5.0.0.93
@@ -6,3 +7,12 @@ pillow==12.3.0
 onnxruntime==1.29.0
 sherpa-onnx==1.13.8
 rapidocr-onnxruntime==1.2.3
+# transitive, pinned to the builds installed with the above
+sherpa-onnx-core==1.13.8        # sherpa-onnx's native libraries (bundled onnxruntime)
+opencv-python==5.0.0.93         # rapidocr-onnxruntime's dependency; same version as the headless build, whose
+                                # cv2 setup.sh keeps on disk
+shapely==2.2.0                  # rapidocr: text box geometry
+pyclipper==1.4.0
+protobuf==7.36.1                # onnxruntime
+flatbuffers==25.12.19
+# not pinned: packaging, PyYAML, six (often provided by the OS; any recent version works)

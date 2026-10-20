@@ -1,0 +1,19 @@
+# reelkit GPU profile: `setup.sh --gpu` installs this after requirements.txt (with --no-deps and
+# --force-reinstall), then checks that a CUDA build really landed; later runs keep the profile.
+# Versions equal requirements.txt's. The CUDA builds must match the host's driver, CUDA and cuDNN;
+# validate the combination on the target host (`reel check --asr-provider cuda --deep`).
+#
+# sherpa-onnx CUDA build: what makes `--asr-provider cuda` work (ASR passes provider="cuda" to
+# sherpa-onnx; replacing the onnxruntime wheel alone does not). k2-fsa publishes CUDA wheels as
+# local versions ("1.13.8+cuda…", one per CUDA / cuDNN combination) on the page below, not on PyPI;
+# the public pins below also match them and pip prefers them. The exact local label depends on the
+# host, so it is not pinned here: once one is validated, pin it (e.g. sherpa-onnx-core==1.13.8+cuda…).
+--find-links https://k2-fsa.github.io/sherpa/onnx/cuda.html
+sherpa-onnx==1.13.8
+sherpa-onnx-core==1.13.8        # holds the native libraries, the CUDA provider among them
+#
+# onnxruntime-gpu replaces the CPU onnxruntime wheel (both install the `onnxruntime` module, so
+# setup.sh uninstalls the CPU one first). Only OCR uses this onnxruntime; it keeps the CPU provider
+# until profiling justifies more, and the GPU wheel still has the CPU provider. It needs the CUDA
+# and cuDNN runtime libraries of its release on the host or in the image.
+onnxruntime-gpu==1.29.0

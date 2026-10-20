@@ -13,14 +13,20 @@ cold-open hook. Resolving it:
 
 resolve_reel() → [{"src", "s", "e", "words": [{"w", "s", "e", "si", "wi"}]}] in source
 seconds, in playing order.
+
+load() checks a plan with contracts.validate_plan (the one implementation of the plan rules)
+and raises ValueError listing every hard problem. envelope() caches each soundtrack's
+envelope as .npy, written atomically under a lock; an unreadable cache is measured again.
 """
+import io
 import json
 import os
 import re
+from pathlib import Path
 
 import numpy as np
 
-from . import ff
+from . import contracts, ff, fsutil
 
 FILLERS = {"um", "umm", "uh", "uhh", "uhm", "erm", "er", "ah", "ahh", "hmm", "mm", "mhm"}
 HOP = 0.005                 # envelope resolution (s)
@@ -30,23 +36,20 @@ MIN_GAP_FOR_CUT = 0.03
 
 
 def load(ref):
-    plan = json.loads(open(ref).read()) if isinstance(ref, (str, os.PathLike)) else ref
-    for key in ("style", "sources", "reels"):
-        if key not in plan:
-            raise ValueError(f"plan: missing '{key}'")
-    ids = [r.get("id") for r in plan["reels"]]
-    if any(i is None for i in ids) or len(set(ids)) != len(ids):
-        raise ValueError("plan: every reel needs a unique id")
-    for r in plan["reels"]:
-        segs = r.get("segments") or []
-        if not segs:
-            raise ValueError(f"plan: reel {r['id']} has no segments")
-        for seg in segs + ([r["hook"]] if r.get("hook") else []):
-            if seg.get("src") not in plan["sources"]:
-                raise ValueError(f"plan: reel {r['id']}: unknown source {seg.get('src')!r}")
-            if "sentences" not in seg and not ("s" in seg and "e" in seg):
-                raise ValueError(f"plan: reel {r['id']}: a segment needs 'sentences' or 's'/'e'")
-    plan.setdefault("output", {})
+    """A plan (path or dict), checked; ValueError lists every error (warnings are not raised).
+    Returns the plan itself with "output" defaulted to {}."""
+    if isinstance(ref, (str, os.PathLike)):
+        try:
+            plan = json.loads(Path(ref).read_text(encoding="utf-8"))
+        except ValueError as e:
+            raise ValueError(f"plan {ref}: not valid JSON ({e})") from None
+    else:
+        plan = ref
+    errors = contracts.validate_plan(plan)["errors"]
+    if errors:
+        raise ValueError(f"plan has {len(errors)} problem(s):\n  - " + "\n  - ".join(errors))
+    if plan.get("output") is None:
+        plan["output"] = {}
     return plan
 
 
@@ -54,17 +57,39 @@ def bare(w):
     return re.sub(r"[^\w']+", "", w.lower())
 
 
+def _cached_envelope(cache):
+    """The cached envelope, or None when absent or unusable (the reason is logged)."""
+    if not os.path.exists(cache):
+        return None
+    try:
+        env = np.load(cache, allow_pickle=False)
+    except Exception as e:          # truncated, not .npy, unreadable: a miss, never a crash
+        ff.log(f"envelope cache {cache} is unreadable ({type(e).__name__}: {e}); measuring again")
+        return None
+    if env.ndim != 1 or env.dtype.kind != "f" or not np.isfinite(env).all():
+        ff.log(f"envelope cache {cache} holds {env.dtype} {env.shape}, not an envelope; measuring again")
+        return None
+    return env
+
+
 def envelope(audio_path, cache=None, sr=8000):
-    """RMS envelope (5 ms hop) of a soundtrack, cached as .npy."""
-    if cache and os.path.exists(cache):
-        return np.load(cache)
+    """RMS envelope (5 ms hop) of a soundtrack, cached as .npy when `cache` is given."""
+    if cache:
+        env = _cached_envelope(cache)
+        if env is not None:
+            return env
+        with fsutil.file_lock(cache):
+            env = _cached_envelope(cache)
+            if env is None:
+                env = envelope(audio_path, None, sr)
+                buf = io.BytesIO()
+                np.save(buf, env, allow_pickle=False)
+                fsutil.atomic_write_bytes(cache, buf.getvalue())
+        return env
     a = ff.audio(audio_path, sr)
     hop = int(sr * HOP)
     n = len(a) // hop
-    env = np.sqrt(np.mean(a[: n * hop].reshape(n, hop) ** 2, axis=1) + 1e-12).astype(np.float32)
-    if cache:
-        np.save(cache, env)
-    return env
+    return np.sqrt(np.mean(a[: n * hop].reshape(n, hop) ** 2, axis=1) + 1e-12).astype(np.float32)
 
 
 def _snap(env, lo, hi):

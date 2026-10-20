@@ -31,7 +31,7 @@ _held = threading.local()       # {lock path: [shared?, depth, fd]} of this thre
 def _log(msg):
     try:
         from .ff import log
-    except Exception:           # ff needs numpy and the ffmpeg paths; this must work without them
+    except (Exception, SystemExit):     # ff needs numpy and ffmpeg (SystemExit without it); this must not
         print(f"[reel] {msg}", file=sys.stderr, flush=True)
         return
     log(msg)
