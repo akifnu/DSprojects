@@ -20,6 +20,24 @@ models, all from GitHub releases: Parakeet TDT 0.6B (English speech, word timing
 Whisper large-v3-turbo (other languages), Silero VAD and YuNet faces. A
 SessionStart hook runs it in every cloud session.
 
+## Agentic operation
+
+Upload a sample reel and long-form footage in a Claude Code session: a hook starts a
+job, and the `reel-job` workflow drives it. The orchestrator code
+(`reelkit/orchestrator.py`, `reel job …`) runs every mechanical step and hands the
+judgment steps to specialist agents (`.claude/agents/`):
+
+```
+upload ─► reel job new ─► [ingest · analyse sample]─► sample-analyst verifies style
+        ─► [transcribe]─► reel-planner writes plan ─► [editing copies · render · QC]
+        ─► qc-reviewers (parallel) ─► fixes → planner → re-render (≤ 2 rounds) ─► deliver
+```
+
+Efficiency policy in one place (`orchestrator.POLICY`): verified styles are reused,
+only planned ranges are decoded, renders run at the calibrated concurrency, review
+covers every fail/warn plus √n spot checks, at most 2 fix rounds then escalation, and
+cheaper models for the mechanical/reviewing roles.
+
 ## The production line
 
 | Step | Command | What it does |

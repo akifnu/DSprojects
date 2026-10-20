@@ -25,6 +25,22 @@ data/batches/<name>/
 data/fonts/                  Google Fonts cache
 ```
 
+## Job — `data/jobs/<id>/job.json` (orchestrator.py)
+
+```jsonc
+{"id": "j20261020-103000", "status": "needs:plan" | "rendering" | "done" | "blocked: …",
+ "request": {"count": 30, "lang": "en", "duration": 30, "notes": ""},
+ "files": [{"path": "…", "kind": "sample|source|music|image", "asset": "<id>"}],
+ "inputs": {"samples": [], "sources": [], "music": [], "sfx": [], "images": []},
+ "steps": {"intake": {"done": true, "at": "10:30:02"}},           // completed steps
+ "needs": {"step": "plan", "agent": "reel-planner", "model": "inherit", …},  // when waiting
+ "rounds": 0, "fixes": [], "only": null,                          // review → re-plan loop
+ "manifest": "data/batches/<id>/manifest.json",
+ "deliver": {"files": [], "review": [], "contact_sheet": "…", "summary": {}},
+ "log": [{"at": "10:30:02", "msg": "…"}]}
+```
+Batches of a job live in `data/batches/<job id>/`.
+
 ## Transcript (asr.py)
 
 ```jsonc

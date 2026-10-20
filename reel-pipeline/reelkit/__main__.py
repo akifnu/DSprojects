@@ -11,6 +11,12 @@
   reel render TIMELINE OUT [--draft] [--still T]
   reel qc MP4 [--timeline T] [--style S]
   reel loop CLIP SECONDS OUT                 seamless endless loop
+
+  reel job new FILE… [--count N] [--duration S] [--lang en] [--notes TEXT]
+  reel job advance ID|latest                 run mechanical steps until an agent is needed
+  reel job done ID STEP [--note T] [--fixes JSON]   an agent finished verify_style|plan|review
+  reel job status ID|latest
+  reel job list
 """
 import argparse
 import json
@@ -141,6 +147,26 @@ def cmd_loop(a):
     loop.main([a.clip, str(a.seconds), a.out])
 
 
+def cmd_job(a):
+    from . import orchestrator as orch
+    if a.action == "new":
+        job = orch.create(a.args, count=a.count, lang=a.lang, duration=a.duration, notes=a.notes or "")
+        print(job["id"])
+    elif a.action == "advance":
+        job = orch.advance(a.args[0] if a.args else "latest")
+        print(json.dumps(orch.status(job["id"]), indent=1, ensure_ascii=False))
+    elif a.action == "done":
+        fixes = json.loads(a.fixes) if a.fixes else None
+        orch.complete(a.args[0], a.args[1], note=a.note or "", **({"fixes": fixes} if fixes is not None else {}))
+        print(json.dumps(orch.status(a.args[0]), indent=1, ensure_ascii=False))
+    elif a.action == "status":
+        print(json.dumps(orch.status(a.args[0] if a.args else "latest"), indent=1, ensure_ascii=False))
+    elif a.action == "list":
+        for p in sorted((DATA / "jobs").glob("*/job.json")):
+            j = json.loads(p.read_text())
+            print(f"{j['id']}  {j['status']:28s} rounds {j['rounds']}  {j['updated']}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="reel", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -193,6 +219,16 @@ def main(argv=None):
     p.add_argument("seconds", type=float)
     p.add_argument("out")
     p.set_defaults(fn=cmd_loop)
+    p = sub.add_parser("job", help="agentic job orchestration")
+    p.add_argument("action", choices=["new", "advance", "done", "status", "list"])
+    p.add_argument("args", nargs="*")
+    p.add_argument("--count", type=int)
+    p.add_argument("--duration", type=float)
+    p.add_argument("--lang", default="en")
+    p.add_argument("--notes")
+    p.add_argument("--note")
+    p.add_argument("--fixes", help='JSON list: [{"reel": "r03", "what": "...", "how": "..."}]')
+    p.set_defaults(fn=cmd_job)
     a = ap.parse_args(argv)
     return a.fn(a) or 0
 
