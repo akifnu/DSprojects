@@ -387,33 +387,36 @@ RIDGE_BPO = 24                # log-frequency bins per octave
 
 
 def _rising_ridges(f, lo=150, hi=4000, cost=6.0, max_up=3, stall=0.15, leak=0.97):
-    """Dynamic programme over the log-frequency spectrogram's excess over its background
-    (per-band 25th percentile over 3 s), 23 ms steps: the best path that stays or climbs
-    0-3 bins (of 1/24 octave) a step and climbs at least every `stall` seconds. Returns per
-    analysis frame the strongest path ending there that has climbed ≥ 1 octave over ≥ 0.4 s,
-    as (score, start frame). Pads (flat) and speech harmonics (stall, wobble) cannot."""
+    """Pitched risers. Dynamic programme over the log-frequency (1/24 octave, 23 ms) excess
+    over each band's background (25th percentile over 3 s), restricted to spectral peaks:
+    paths stay or climb 0-3 bins a step and must climb at least every `stall` seconds.
+    Each path that has climbed ≥ 1 octave over ≥ 0.4 s is traced back and kept only if its
+    climb is steady (log-frequency vs time r² ≥ 0.9, ≥ 1.5 octave/s, 0.6-2.5 s), it stands
+    ≥ 15 dB over the background on average and keeps getting louder (≥ 10 dB/s): a voice
+    hopping up its harmonics, a whoosh's rising half and pads all fail one of these.
+    Returns [(start frame, end frame)] in analysis frames."""
     nb = int(np.log2(hi / lo) * RIDGE_BPO)
     edges = lo * 2 ** (np.arange(nb + 1) / RIDGE_BPO)
+    centres = np.sqrt(edges[:-1] * edges[1:])
     M = np.zeros((nb, len(FREQS)))
     for i in range(nb):
         sel = (FREQS >= edges[i]) & (FREQS < edges[i + 1])
-        if not sel.any():
-            sel = np.abs(FREQS - (edges[i] * edges[i + 1]) ** 0.5) == np.abs(FREQS - (edges[i] * edges[i + 1]) ** 0.5).min()
-        M[i, sel] = 1.0
+        M[i, sel if sel.any() else int(np.argmin(np.abs(FREQS - centres[i])))] = 1.0
     T = f.n // RIDGE_HOP
     Pd = f.P[:, :T * RIDGE_HOP].reshape(len(FREQS), T, RIDGE_HOP).mean(2)
     L = 10 * np.log10(M @ Pd + 1e-10)
     bgL = ndimage.percentile_filter(L, 25, size=(1, int(3 * FPS / RIDGE_HOP)), mode="nearest")
-    E = np.clip(L - bgL, 0, 40) - cost
-    R = np.zeros(nb)
-    sb = np.arange(nb)
-    st = np.zeros(nb, int)
-    up = np.zeros(nb, int)
-    stall_n = max(1, int(round(stall * FPS / RIDGE_HOP)))
-    min_len = int(0.4 * FPS / RIDGE_HOP)
-    score = np.zeros(f.n)
-    start = -np.ones(f.n, int)
+    X = np.clip(L - bgL, 0, 40)
+    peak = ndimage.maximum_filter1d(L, 5, axis=0) <= L + 1e-9
+    E = np.where(peak, X - cost, -3 * cost)
     idx = np.arange(nb)
+    R = np.zeros(nb)
+    sb, st, up = idx.copy(), np.zeros(nb, int), np.zeros(nb, int)
+    bp = np.zeros((T, nb), np.int16)
+    alive = np.zeros((T, nb), bool)
+    stall_n = max(1, int(round(stall * FPS / RIDGE_HOP)))
+    min_len = int(0.6 * FPS / RIDGE_HOP)
+    ends = {}
     for t in range(T):
         cand = np.full((max_up + 1, nb), -np.inf)
         cand[0] = R
@@ -428,13 +431,41 @@ def _rising_ridges(f, lo=150, hi=4000, cost=6.0, max_up=3, stall=0.15, leak=0.97
         sb = np.where(cont, sb[src], idx)
         st = np.where(cont, st[src], t)
         up = np.where(cont, last_up, t)
-        ok = (idx - sb >= RIDGE_BPO) & (t - st >= min_len) & (R > 60)
-        if ok.any():
-            k = int(np.argmax(np.where(ok, R, -np.inf)))
-            fr = t * RIDGE_HOP
-            score[fr:fr + RIDGE_HOP] = R[k]
-            start[fr:fr + RIDGE_HOP] = st[k] * RIDGE_HOP
-    return score, start
+        bp[t] = np.where(cont, src, -1)
+        ok = (idx - sb >= RIDGE_BPO) & (t - st >= min_len) & (R > 0)
+        for k in np.where(ok)[0]:
+            key = int(st[k])
+            if key not in ends or R[k] > ends[key][2]:
+                ends[key] = (t, int(k), float(R[k]))
+    out = []
+    for s0, (t, k, _) in ends.items():
+        path = [k]
+        tt = t
+        while tt > s0 and bp[tt, path[-1]] >= 0:
+            path.append(int(bp[tt, path[-1]]))
+            tt -= 1
+        path = np.array(path[::-1])
+        times = np.arange(tt, t + 1)[-len(path):]
+        if len(path) < min_len:
+            continue
+        r = np.corrcoef(times, path)[0, 1] if np.ptp(path) > 0 else 0.0
+        ex = X[path, times]
+        dur = len(path) * RIDGE_HOP / FPS
+        rate = (path[-1] - path[0]) / RIDGE_BPO / dur
+        cresc = np.polyfit(np.arange(len(ex)) * RIDGE_HOP / FPS, ex, 1)[0]
+        if r * r >= 0.9 and ex.mean() >= 15 and np.percentile(ex, 10) >= 6 and rate >= 1.5 and \
+                0.6 <= dur <= 2.5 and cresc >= 10:
+            out.append((int(times[0] * RIDGE_HOP), int(times[-1] * RIDGE_HOP + RIDGE_HOP)))
+    # one riser per overlapping group: keep the longest
+    out.sort()
+    merged = []
+    for a, b in out:
+        if merged and a < merged[-1][1]:
+            if b - a > merged[-1][1] - merged[-1][0]:
+                merged[-1] = (a, b)
+        else:
+            merged.append((a, b))
+    return merged
 
 
 def _risers(f):
@@ -443,18 +474,7 @@ def _risers(f):
     with a rising centroid. Anchored at its loudest point (where it lands, the end)."""
     v = _smooth(f.full, int(0.03 * FPS))
     lc = _smooth(np.log2(np.maximum(f.centroid, 50)), int(0.05 * FPS))
-    rscore, rstart = _rising_ridges(f)
-    cands = []
-    k = 0
-    while k < f.n:                       # each run of ridge frames is one riser; it ends where the run ends
-        if rscore[k] > 0:
-            j = k
-            while j + 1 < f.n and rscore[j + 1] > 0:
-                j += 1
-            cands.append((int(rstart[k:j + 1].min()), j))
-            k = j + 1
-        else:
-            k += 1
+    cands = list(_rising_ridges(f))
     for L in (0.6, 0.9, 1.2, 1.6):
         n = int(L * FPS)
         s_, r2 = _running_fit(v, n)

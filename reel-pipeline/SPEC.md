@@ -54,8 +54,10 @@ compiler scales them by `out_height / sample.height`.
             "transition_in": "cut" | {"type": "dissolve|flash|zoom|whip_left|whip_up|…", "dur": 0.3},
             "move": {"type": "static|zoom_in|zoom_out|pan", "scale": 1.12, "ease": "inout",
                      "dx": 0, "dy": 0, "shake": 0.0},
+            "moves": [{"type": "zoom_in", "t0": 0.4, "t1": 0.8, "scale": 1.15, "ease": "out"}],
+                                      // quick push-ins / zoom bursts inside the shot (times from shot start)
             "punch": 1.25,            // scale vs previous shot when the cut re-frames the same scene
-            "jump_cut": true}],
+            "jump_cut": true}],       // (or "new_scene": true)
  "motion": {"punch_rate": 0.5, "punch_scales": [1.0, 1.25],
             "push_rate": 0.3, "push_scale_per_s": 0.03, "push_ease": "inout", "shake": 0.0},
  "transitions": {"counts": {"cut": 10, "zoom": 2}, "default": "cut",
@@ -73,7 +75,8 @@ compiler scales them by `out_height / sample.height`.
  },
  "titles": {"present": true, "style": {}, "events": []},       // hooks / headlines
  "overlays": {"persistent": [{"text": "@handle", "box": []}]},
- "grade": {"look": {}, "sharpen": 0.0, "grain": 0.0, "vignette": 0.0},   // look = grade.Look.stats()
+ "grade": {"look": {}, "sharpen": 0.0, "grain": 0.0, "vignette": 0.0,    // look = grade.Look.stats()
+           "noise_std": 0.0, "corner_ratio": 1.0, "acutance": 0.0},       // raw measures behind grain/vignette
  "audio": {
    "loudness": {"I": -14.1, "TP": -0.1, "LRA": 3.9},
    "speech": {"present": true, "coverage": 0.8, "lang": "en"},
@@ -100,6 +103,7 @@ compiler scales them by `out_height / sample.height`.
  "sfx": {"whoosh": "<asset id>"} | null,            // null = library/sfx defaults
  "reels": [{
    "id": "r01", "title": "Why most diets fail",
+   "timeline": "path/to/timeline.json",            // optional: pre-built, skips compiling
    "segments": [{"src": "S", "sentences": [120, 127]}, {"src": "S", "s": 812.4, "e": 830.1}],
    "hook": {"src": "S", "sentences": [128]},       // optional cold open, placed first
    "title_text": "STOP doing this",                 // optional on-screen hook title

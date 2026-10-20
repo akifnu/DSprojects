@@ -256,7 +256,7 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     push_every = _every(mot.get("push_rate"))
     special = _g(style, "transitions", "special") or {}
     trans_every = _every(special.get("rate")) if special.get("type") not in (None, "cut") else 0
-    media, video, run_cut_count = {}, [], 0
+    media, video, run_cut_count, probes = {}, [], 0, {}
     level = 0
     for n, (ri, s, e) in enumerate(shots):
         r = runs[ri]
@@ -281,9 +281,8 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                 clip["transition_in"] = {"type": special["type"], "dur": float(special.get("dur", 0.3))}
         scale_at = (lambda sc: (lambda tt: render.kf(sc, tt, 1.0)))(clip["scale"])
         if reframing:
-            info = {"width": m["width"], "height": m["height"]}
-            rk = reframe.clip_keyframes(m["path"], off, dur, (W, H), scale_at, info=dict(info, **ff.probe(m["path"])),
-                                        fps=fps)
+            info = probes.setdefault(m["path"], ff.probe(m["path"]))
+            rk = reframe.clip_keyframes(m["path"], off, dur, (W, H), scale_at, info=info, fps=fps)
             clip["x"], clip["y"] = rk["x"], rk["y"]
             clip["subject"] = rk["subject"]
         video.append(clip)

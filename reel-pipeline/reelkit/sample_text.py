@@ -385,60 +385,89 @@ def _segments(cols, min_gap):
 
 def measure(frame, ev):
     """Colours, box, outline, shadow, glyph masks and geometry of a text block in one
-    frame (frame at the sample's full resolution, ev boxes already in its pixels)."""
+    frame (frame at the sample's full resolution, ev boxes already in its pixels).
+    Glyphs = thin strokes found by a morphological top-hat (bright-on-dark or
+    dark-on-bright, whichever is stronger); what hugs them is read from rings at
+    increasing distance: outline right next to the glyphs, box or picture further out."""
     H, W = frame.shape[:2]
     x0, y0, x1, y1 = [int(round(v)) for v in ev["box"]]
     lh = float(ev["ink_h"])
-    pad = int(max(4, 0.5 * lh))
+    pad = int(max(6, 0.6 * lh))
     X0, Y0, X1, Y1 = max(0, x0 - pad), max(0, y0 - pad), min(W, x1 + pad), min(H, y1 + pad)
     crop = frame[Y0:Y1, X0:X1]
-    if crop.size == 0:
+    if crop.size == 0 or min(crop.shape[:2]) < 8:
         return None
-    lab = cv2.cvtColor(crop.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
-    # what surrounds the glyphs: the colour of the crop's border band
-    band = np.zeros(crop.shape[:2], bool)
-    b = max(2, pad // 3)
-    band[:b] = band[-b:] = True
-    band[:, :b] = band[:, -b:] = True
-    near = np.median(crop[band], axis=0)
-    near_sd = float(np.std(lab[band], axis=0).mean())
-    dist = np.linalg.norm(lab - _lab(near)[0], axis=-1)
-    ink = dist > 22
-    ink[band] = False
-    ink = cv2.morphologyEx(ink.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)) > 0
-    if ink.sum() < 30:
+    g = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    k = max(5, int(0.45 * lh)) | 1
+    ker = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+    inner = np.zeros(g.shape, bool)
+    inner[y0 - Y0:y1 - Y0, x0 - X0:x1 - X0] = True
+    best = None
+    for op in (cv2.MORPH_TOPHAT, cv2.MORPH_BLACKHAT):
+        th = cv2.morphologyEx(g, op, ker)
+        v = th[inner]
+        if v.size == 0 or v.max() < 25:
+            continue
+        t, _ = cv2.threshold(v.astype(np.uint8).reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        mask = (th > max(t, 25)) & inner
+        if mask.sum() < 30:
+            continue
+        # the true glyph mask leaves a uniform surround (box / picture) a little way out;
+        # the inverse mask (letter gaps) would put glyphs in that ring
+        dd = cv2.distanceTransform((~mask).astype(np.uint8), cv2.DIST_L2, 3)
+        ringm = (dd > 0.22 * lh) & (dd <= 0.4 * lh) & inner
+        sd = float(np.std(_lab(crop[ringm]), axis=0).mean()) if ringm.sum() > 12 else 99.0
+        if best is None or sd < best[0] - 1.0:
+            best = (sd, mask)
+    if best is None or best[1].sum() < 30:
         return None
+    glyph = cv2.morphologyEx(best[1].astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)) > 0
+    if glyph.sum() < 30:
+        return None
+    core = cv2.erode(glyph.astype(np.uint8), np.ones((2, 2), np.uint8)) > 0
+    fill = np.median(crop[core if core.sum() > 15 else glyph], axis=0)
+    # rings outside the glyphs, by distance
+    dist = cv2.distanceTransform((~glyph).astype(np.uint8), cv2.DIST_L2, 3)
+    def ring(a, b):
+        m = (dist > a) & (dist <= b) & inner
+        return crop[m] if m.sum() > 12 else None
+    r1 = ring(0, max(1.5, 0.06 * lh))
+    r2 = ring(0.22 * lh, 0.4 * lh)
+    if r1 is None or r2 is None:
+        return None
+    c1, c2 = np.median(r1, axis=0), np.median(r2, axis=0)
+    sd2 = float(np.std(_lab(r2), axis=0).mean())
+    stroke = None
+    ink = glyph.copy()
+    if _de(c1, fill) > 25 and _de(c1, c2) > 20:
+        # outline width: distance over which the ring colour stays the outline colour
+        w = 0
+        for d in np.arange(0.5, 0.3 * lh, 0.5):
+            r = ring(d, d + 0.5)
+            if r is None or _de(np.median(r, axis=0), c1) > 18:
+                break
+            w = d + 0.5
+        if w >= 1.0:
+            stroke = {"color": _hex(c1), "width": round(float(w), 1)}
+            ink = glyph | (dist <= w)
+            ink &= inner | (dist <= w)
+    near = c2
     ys, xs = np.where(ink)
     ink_box = [X0 + xs.min(), Y0 + ys.min(), X0 + xs.max() + 1, Y0 + ys.max() + 1]
-    # fill = the colour of glyph interiors; outline = a different colour on their rims
-    dt = cv2.distanceTransform(ink.astype(np.uint8), cv2.DIST_L2, 3)
-    deep = ink & (dt >= max(1.0, 0.6 * dt[ink].max()))
-    fill = np.median(crop[deep if deep.sum() > 10 else ink], axis=0)
-    fill_d = np.linalg.norm(lab - _lab(fill)[0], axis=-1)
-    fill_mask = ink & (fill_d < 24)
-    stroke = None
-    rest = ink & ~fill_mask
-    if rest.sum() > 0.08 * ink.sum() and fill_mask.sum() > 20:
-        rim_c = np.median(crop[rest], axis=0)
-        per = sum(len(c) for c in cv2.findContours(fill_mask.astype(np.uint8), cv2.RETR_LIST,
-                                                    cv2.CHAIN_APPROX_NONE)[0])
-        width = rest.sum() / max(1, per)
-        # an outline hugs the glyphs: its colour differs from fill and surroundings
-        if _de(rim_c, fill) > 25 and _de(rim_c, near) > 18 and width >= 0.7:
-            stroke = {"color": _hex(rim_c), "width": round(float(width), 1)}
-    # box: a uniform surround that differs from what lies further out
     box = None
-    far = _ring(frame, ink_box, int(1.6 * lh), int(2.4 * lh))
-    if near_sd < 7 and far is not None:
+    far = _ring(frame, ink_box, int(1.2 * lh), int(2.0 * lh))
+    if sd2 < 7 and far is not None:
         far_c = np.median(far, axis=0)
         far_sd = float(np.std(_lab(far), axis=0).mean())
-        if _de(far_c, near) > 14 or far_sd > 3 * max(1.0, near_sd):
+        if _de(far_c, near) > 14 or far_sd > 3 * max(1.0, sd2):
             box = _box_extent(frame, ev, ink_box, near, lh)
+            if box is not None and (box["bounds"][2] - box["bounds"][0]) > 0.98 * W:
+                box = None                                 # a full-width band is the picture, not a box
     shadow = None
-    if box is None:
-        shadow = _shadow(frame, ink_box, near, ink, (X0, Y0), lh)
-    return {"fill": fill, "near": near, "near_sd": near_sd, "stroke": stroke, "box": box, "shadow": shadow,
-            "ink": ink, "fill_mask": fill_mask, "origin": (X0, Y0), "ink_box": [int(v) for v in ink_box]}
+    if box is None and stroke is None:
+        shadow = _shadow(frame, ink_box, near, glyph, (X0, Y0), lh)
+    return {"fill": fill, "near": near, "near_sd": sd2, "stroke": stroke, "box": box, "shadow": shadow,
+            "ink": ink, "fill_mask": glyph, "origin": (X0, Y0), "ink_box": [int(v) for v in ink_box]}
 
 
 def _box_extent(frame, ev, ink_box, color, lh):
@@ -652,27 +681,29 @@ def font_size(glyph_mask, text, family, weight):
 def _features(ev, m, size, duration):
     W, H = size
     x0, y0, x1, y1 = ev["box"]
-    seen = ev["seen"]
+    seen = ev["seen"][1:] if len(ev["seen"]) > 2 else ev["seen"]     # skip the entrance
     cxs = [(b[0] + b[2]) / 2 for _, b in seen]
     cys = [(b[1] + b[3]) / 2 for _, b in seen]
     hs = [b[3] - b[1] for _, b in seen]
     moving = (max(cys) - min(cys)) > 0.03 * H or (max(cxs) - min(cxs)) > 0.04 * W or \
-        (max(hs) / max(1, min(hs)) > 1.25 and len(seen) > 2)
+        (max(hs) / max(1, min(hs)) > 1.3 and len(seen) > 2)
     return {"ink_rel": ev["ink_h"] / H, "decorated": bool(m and (m["box"] or m["stroke"] or m["shadow"])),
             "centred": abs((x0 + x1) / 2 - W / 2) < 0.06 * W, "moving": moving,
             "dur": ev["e"] - ev["s"], "persistent": (ev["e"] - ev["s"]) > 0.6 * duration}
 
 
-def _is_overlay(f, text):
+def _wordy(text):
+    letters = sum(ch.isalpha() for ch in text)
+    return letters >= 2 and letters / max(1, len(text.replace(" ", "").replace("\n", ""))) > 0.6
+
+
+def _is_candidate(f, text):
+    """Could be an editor overlay: not moving with the picture, big enough, real words."""
     if f["moving"]:
         return False
-    if f["decorated"] and f["ink_rel"] >= MIN_INK:
-        return True
-    if f["ink_rel"] >= 0.02 and f["centred"]:
-        return True
     if f["persistent"] and ("@" in text or ".com" in text.lower()) and f["ink_rel"] >= 0.009:
         return True
-    return False
+    return f["ink_rel"] >= 0.02 and _wordy(text)
 
 
 # ------------------------------------------------------------------ animation
@@ -913,19 +944,23 @@ def analyze_text(path, info, gray=None, transcript=None):
     for ev in evs:
         f = mid.get(round(ev["t_mid"], 3))
         m = measure(f, ev) if f is not None else None
+        if m is None:
+            continue
         feat = _features(ev, m, (W0, H0), info["duration"])
-        if _is_overlay(feat, ev["text"]):
+        if _is_candidate(feat, ev["text"]):
             ev["m"], ev["feat"] = m, feat
             kept.append(ev)
     # captions = the largest recurring group with one look and position; then titles / watermarks
     for ev in kept:
         _typography(path, info, ev, mid)
-    groups = _group(kept, (W0, H0))
-    caps = max(groups, key=len) if groups else []
-    if len(caps) < 2:
-        caps = []
+    groups = _group([e for e in kept if not e["feat"]["persistent"]], (W0, H0))
+    groups = [g for g in groups if len(g) >= 3 and sum(e["e"] - e["s"] for e in g) >= 2.0]
+    caps = max(groups, key=lambda g: sum(e["e"] - e["s"] for e in g)) if groups else []
     persistent = [e for e in kept if e["feat"]["persistent"] and e not in caps]
-    titles = [e for e in kept if e not in caps and e not in persistent]
+    # a title: on screen ≥ 1 s, centred, styled (box / outline / shadow) or large
+    titles = [e for e in kept if e not in caps and e not in persistent and e["e"] - e["s"] >= 1.0
+              and e["feat"]["centred"] and (e["feat"]["decorated"] or e["feat"]["ink_rel"] >= 0.03)]
+    kept = caps + titles + persistent
     for e in caps:
         e["role"] = "caption"
     for e in titles:
@@ -964,29 +999,18 @@ def analyze_text(path, info, gray=None, transcript=None):
 
 
 def _group(evs, size):
-    """Cluster overlay events by look and position (a caption track recurs)."""
+    """Cluster events into tracks: same height band, similar glyph size and fill colour."""
     W, H = size
     groups = []
     for e in sorted(evs, key=lambda e: e["s"]):
-        m = e["m"]
-        key = (bool(m["box"]), bool(m["stroke"]), bool(m["shadow"]))
         cy = (e["box"][1] + e["box"][3]) / 2
         for g in groups:
-            g0 = g[0]
-            m0 = g0["m"]
-            if key != (bool(m0["box"]), bool(m0["stroke"]), bool(m0["shadow"])):
-                continue
-            if _de(m["fill"], m0["fill"]) > 30:
-                continue
-            if abs(e["ink_h"] / g0["ink_h"] - 1) > 0.35:
-                continue
             gcy = np.median([(x["box"][1] + x["box"][3]) / 2 for x in g])
-            if abs(cy - gcy) > 0.12 * H:
-                continue
-            if e["feat"]["persistent"] != g0["feat"]["persistent"]:
-                continue
-            g.append(e)
-            break
+            gh = np.median([x["ink_h"] for x in g])
+            if abs(cy - gcy) < 0.07 * H and abs(e["ink_h"] / gh - 1) < 0.35 and \
+                    _de(e["m"]["fill"], g[0]["m"]["fill"]) < 30:
+                g.append(e)
+                break
         else:
             groups.append([e])
     return groups
