@@ -14,56 +14,155 @@ Style keys (all optional; sizes in px at the timeline's canvas size):
              emphasised words, for its whole duration), rate}
   anim {in: none|pop|fade|slide_up|slide_down|zoom|word_reveal, in_dur, overshoot,
         out: none|fade|pop, out_dur, slide_px}
+
+Fonts come from library/fonts, then the data/fonts cache, then Google Fonts (downloaded
+to a unique temp name under a per-font lock, checked, renamed into place), else a system
+fallback (logged). REELKIT_OFFLINE=1 never touches the network; prefetch_style_fonts()
+fetches a style's fonts once, before renders fan out.
 """
+import http.client
 import io
 import math
 import os
 import re
+import tempfile
+import urllib.error
+import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from . import ff
+from . import ff, fsutil
 from .paths import FONTS, LIBRARY
 
 FALLBACKS = ["/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
              "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"]
+_net = {"down": None}          # why downloads stopped in this process (one network failure is enough)
+
+
+class FontUnavailable(SystemExit, RuntimeError):
+    """Not even a fallback font is installed. A SystemExit as it always was (callers catch
+    that), and a RuntimeError so that `except Exception` handles it too."""
+
+
+def offline():
+    return os.environ.get("REELKIT_OFFLINE", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _weight(w):
+    try:
+        return int(round(float(w)))
+    except (TypeError, ValueError):
+        return 700
+
+
+def _fallback(family, why):
+    for fb in FALLBACKS:
+        if os.path.exists(fb):
+            ff.log(f"font {family} unavailable ({why}); using {fb}")
+            return fb
+    raise FontUnavailable(f"font {family} unavailable ({why}) and no fallback installed")
+
+
+def _usable(path):
+    try:
+        ImageFont.truetype(str(path), 16)
+        return True
+    except Exception:
+        return False
+
+
+def _fetch(url, timeout):
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/4.0"}),
+                                timeout=timeout) as r:
+        return r.read()
+
+
+def _download(family, weight):
+    """(ttf bytes, weight served) from Google Fonts, the nearest available weight; None when the
+    family has no usable file. Network failures raise (OSError, HTTPException)."""
+    q = urllib.parse.quote(family, safe=" ").replace(" ", "+")
+    for w in [weight] + sorted({400, 500, 600, 700, 800, 900} - {weight}, key=lambda x: abs(x - weight)):
+        try:
+            css = _fetch(f"https://fonts.googleapis.com/css2?family={q}:wght@{w}", 8).decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404):
+                continue                      # no such weight (or family)
+            raise
+        m = re.search(r"url\((https://[^)]+\.ttf)\)", css)
+        if not m:
+            continue
+        try:
+            data = _fetch(m.group(1), 15)
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404):
+                continue
+            raise
+        try:
+            ImageFont.truetype(io.BytesIO(data), 16)
+        except Exception:
+            continue
+        return data, w
+    return None
+
+
+def _publish(path, data):
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".part")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 @lru_cache(maxsize=256)
 def font_file(family, weight=700):
     """TTF for a Google Font family/weight, cached in data/fonts (nearest available weight)."""
-    FONTS.mkdir(parents=True, exist_ok=True)
-    local = LIBRARY / "fonts" / f"{family}-{weight}.ttf"
+    if not isinstance(family, str) or not family.strip():
+        return _fallback(repr(family), "no family named")
+    weight = _weight(weight)
+    safe = re.sub(r"[/\\\x00]", "_", family)
+    local = LIBRARY / "fonts" / f"{safe}-{weight}.ttf"
     if local.exists():
         return str(local)
-    path = FONTS / f"{family.replace(' ', '_')}-{weight}.ttf"
-    if path.exists():
+    path = FONTS / f"{safe.replace(' ', '_')}-{weight}.ttf"
+    if path.exists() and _usable(path):
         return str(path)
-    for w in [weight] + sorted({400, 500, 600, 700, 800, 900} - {weight}, key=lambda x: abs(x - weight)):
-        try:
-            url = f"https://fonts.googleapis.com/css2?family={family.replace(' ', '+')}:wght@{w}"
-            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/4.0"}), timeout=8) as r:
-                css = r.read().decode()
-            ttf = re.search(r"url\((https://[^)]+\.ttf)\)", css).group(1)
-            with urllib.request.urlopen(ttf, timeout=15) as r:
-                data = r.read()
-            ImageFont.truetype(io.BytesIO(data), 16)
-            tmp = path.with_suffix(".part")
-            tmp.write_bytes(data)
-            os.replace(tmp, path)
-            if w != weight:
-                ff.log(f"font {family} has no weight {weight}; using {w}")
-            return str(path)
-        except Exception:
-            continue
-    for fb in FALLBACKS:
-        if os.path.exists(fb):
-            ff.log(f"font {family} unavailable; using {fb}")
-            return fb
-    raise SystemExit(f"font {family} unavailable and no fallback installed")
+    if offline():
+        return _fallback(family, "REELKIT_OFFLINE=1")
+    if _net["down"]:
+        return _fallback(family, _net["down"])
+    why = None
+    try:
+        FONTS.mkdir(parents=True, exist_ok=True)
+        with fsutil.file_lock(path):
+            if path.exists() and _usable(path):       # another process fetched it meanwhile
+                return str(path)
+            try:
+                got = _download(family, weight)
+            except (OSError, http.client.HTTPException) as e:
+                _net["down"] = why = f"download failed: {type(e).__name__}: {e}"[:200]
+                got = None
+            if got:
+                _publish(path, got[0])
+                if got[1] != weight:
+                    ff.log(f"font {family} has no weight {weight}; using {got[1]}")
+                return str(path)
+            why = why or "not on Google Fonts"
+    except OSError as e:
+        why = f"font cache unusable: {e}"
+    return _fallback(family, why)
 
 
 @lru_cache(maxsize=512)
@@ -285,7 +384,40 @@ def blend(canvas, rgb, a, x0, y0):
 
 def prefetch_fonts(families, weights=(400, 500, 600, 700, 800, 900), workers=8):
     """Download (cache) Google Fonts files ahead of use — setup time, not analysis time."""
-    from concurrent.futures import ThreadPoolExecutor
     jobs = [(f, w) for f in families for w in weights]
     with ThreadPoolExecutor(workers) as pool:
         return list(pool.map(lambda fw: font_file(*fw), jobs))
+
+
+def style_fonts(style):
+    """(family, weight) pairs a style renders with: its own (DEFAULT filled in) and its highlight's."""
+    if not isinstance(style, dict):
+        return []
+    s = dict(DEFAULT, **style)
+    hl = s.get("highlight") if isinstance(s.get("highlight"), dict) else {}
+    out = []
+    for fam, w in ((s.get("font"), s.get("weight")),
+                   (hl.get("font", s.get("font")), hl.get("weight", s.get("weight")))):
+        if isinstance(fam, str) and fam.strip() and (fam, _weight(w)) not in out:
+            out.append((fam, _weight(w)))
+    return out
+
+
+def prefetch_style_fonts(styles, workers=4):
+    """Fetch the fonts of these captions.py styles (None ignored) before renders fan out, so no
+    render worker reaches the network. {"Family-weight": file}; a font that cannot be had maps
+    to the fallback it renders with (None when not even that exists)."""
+    want = []
+    for st in styles or ():
+        want += [fw for fw in style_fonts(st) if fw not in want]
+    if not want:
+        return {}
+
+    def one(fw):
+        try:
+            return font_file(*fw)
+        except FontUnavailable as e:
+            ff.log(str(e))
+            return None
+    with ThreadPoolExecutor(max(1, min(workers, len(want)))) as pool:
+        return {f"{f}-{w}": p for (f, w), p in zip(want, pool.map(one, want))}

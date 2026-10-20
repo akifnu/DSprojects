@@ -1,8 +1,14 @@
 """plan + style + sources → one timeline.json per reel (see render.py for the format).
 
-compile_reel(plan, reel, style, out_dir)  one reel
-compile_plan(plan, out_root)              every reel; editing copies are made once per
-                                          source for the union of all reels' ranges
+compile_reel(plan, reel, style, out_dir)  one reel: out_dir/timeline.json + deps.json
+compile_plan(plan, out_root)              every reel, through one Context
+Context(plan, style)                      what every reel shares, each made once: assets,
+                                          transcripts, audio envelopes, editing copies for the
+                                          union of all reels' runs, each source's colour look
+dependencies(tl, base_dir, …)             deps.json: what can change a timeline's rendering
+                                          without changing its JSON — asset hashes, editing-copy
+                                          identities, transcript fingerprints, style / LUT / font /
+                                          SFX / music contents, renderer version
 
 What the style decides (all px values are scaled by output_height / sample.height):
   pacing      shot length: long runs are split at word boundaries into shots near the
@@ -23,13 +29,14 @@ covers the canvas.
 """
 import json
 import math
+import os
 import statistics
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 
-from . import ff, grade, plan as planlib, reframe, render, source, store
+from . import ff, fsutil, grade, plan as planlib, reframe, render, source, store
 
 WEAK = {"the", "a", "an", "of", "to", "and", "on", "in", "at", "with", "for", "that", "this", "is", "are", "was",
         "were", "we", "you", "i", "it", "as", "or", "but", "these", "those", "all", "have", "has", "be", "by",
@@ -314,7 +321,7 @@ def _voice_db(runs, envelopes):
     return 20 * math.log10(math.sqrt(float(np.mean(x ** 2))) + 1e-9) if len(x) else None
 
 
-# ------------------------------------------------------------------ compile
+# ------------------------------------------------------------------ inputs
 
 def _sfx_path(kind, plan):
     ref = (plan.get("sfx") or {}).get(kind)
@@ -328,8 +335,182 @@ def _sfx_path(kind, plan):
         return None
 
 
-def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, envelopes=None, reframing=True):
-    """Write out_dir/timeline.json for one reel and return its path."""
+def _lang(plan, style):
+    return (plan.get("output") or {}).get("lang") or _g(style, "audio", "speech", "lang", default="en") or "en"
+
+
+def _transcript(asset, lang, provider=None):
+    return source.transcript(asset, lang, provider=provider) if provider else source.transcript(asset, lang)
+
+
+def _reel_sources(reel):
+    segs = ([reel["hook"]] if reel.get("hook") else []) + list(reel.get("segments") or [])
+    return sorted({seg.get("src") for seg in segs if isinstance(seg, dict)}, key=str)
+
+
+# ------------------------------------------------------------------ dependencies
+
+_SHA = {}
+_FP_WARNED = set()
+
+
+def file_sha(path):
+    """Full sha-256 of a file (None when missing), remembered per (path, size, mtime, inode)."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    key = (str(path), st.st_size, st.st_mtime_ns, st.st_ino)
+    if key not in _SHA:
+        _SHA[key] = fsutil.sha256_file(path)
+    return _SHA[key]
+
+
+def _stat(path):
+    try:
+        st = os.stat(path)
+        return {"path": str(path), "size": st.st_size, "mtime_ns": st.st_mtime_ns}
+    except OSError:
+        return {"path": str(path), "size": None, "mtime_ns": None}
+
+
+def asr_fingerprint(lang, provider=None):
+    """asr.fingerprint (language, model, provider, timing precision); a stand-in naming the
+    language and provider when the ASR module cannot give one."""
+    from . import asr
+    try:
+        return str(asr.fingerprint(lang, provider=provider))
+    except Exception as e:
+        if (lang, provider) not in _FP_WARNED:
+            _FP_WARNED.add((lang, provider))
+            ff.log(f"ASR fingerprint unavailable ({ff.describe(e)}): keyed by language and provider only")
+        return f"unknown:{lang}:{provider or 'default'}"
+
+
+def _font_deps(tl):
+    """sha-256 of every font file the timeline's text events are drawn with."""
+    from . import captions
+    styles = tl.get("styles") or {}
+    out = {}
+    for ev in list(tl.get("captions") or []) + list(tl.get("text") or []):
+        st = ev.get("style", "caption")
+        st = st if isinstance(st, dict) else styles.get(st) or {}
+        s = dict(captions.DEFAULT, **st)
+        key = f"{s.get('font')}-{s.get('weight')}"
+        if key in out:
+            continue
+        try:
+            out[key] = file_sha(captions.font_file(s["font"], s["weight"]))
+        except (Exception, SystemExit) as e:          # no font and no fallback: the render reports it
+            out[key] = None
+            ff.log(f"font {key}: {e}")
+    return dict(sorted(out.items()))
+
+
+def dependencies(tl, base_dir, plan=None, style=None, lang=None, provider=None, transcripts=None):
+    """deps.json of a timeline: everything that can change its rendering without changing its JSON.
+    {"assets": {source key: sha256}, "copies": [{path, size, mtime_ns}] (editing copies, soundtracks
+    and any other media), "transcripts": {source key: ASR fingerprint — the one the transcript in
+    use carries, else asr's for lang / provider}, "style_sha256", "lut_sha256",
+    "fonts": {"Family-weight": sha256}, "sfx": {path: sha256}, "music": sha256 | None, "renderer"}."""
+    deps = {"assets": {}, "copies": [], "transcripts": {},
+            "style_sha256": fsutil.sha256_json(style) if style is not None else None, "lut_sha256": None,
+            "fonts": {}, "sfx": {}, "music": None, "renderer": render.RENDERER_VERSION}
+    music = None
+    if plan:
+        used = {r.get("src") for r in _g(tl, "meta", "runs", default=[]) or [] if isinstance(r, dict)}
+        for key, ref in sorted((plan.get("sources") or {}).items()):
+            if used and key not in used:          # only the sources this reel plays
+                continue
+            a = store.get(ref)
+            deps["assets"][key] = a.meta.get("sha256") or a.id
+            fp = ((transcripts or {}).get(key) or {}).get("fingerprint")
+            deps["transcripts"][key] = fp if isinstance(fp, str) else asr_fingerprint(lang or "en", provider)
+        if isinstance(plan.get("music"), dict) and plan["music"].get("asset"):
+            m = store.get(plan["music"]["asset"])
+            music = m.meta.get("sha256") or file_sha(m.path)
+    for key, ref in sorted((tl.get("media") or {}).items()):
+        path = render._resolve(ref, base_dir)
+        if key.startswith("sfx_"):
+            deps["sfx"][path] = file_sha(path)
+        elif key == "music" and music is not None:
+            deps["music"] = music
+        else:
+            deps["copies"].append(_stat(path))
+    lut = (tl.get("grade") or {}).get("lut")
+    if lut:
+        deps["lut_sha256"] = file_sha(render._resolve(lut, base_dir))
+    deps["fonts"] = _font_deps(tl)
+    return deps
+
+
+# ------------------------------------------------------------------ shared context
+
+class Context:
+    """What every reel of a plan shares, each made once: source assets, transcripts, audio
+    envelopes, editing copies for the union of all reels' runs (made on first use) and each
+    source's colour look. A source whose transcript or envelope fails is kept in .errors;
+    only the reels that use it fail (check())."""
+
+    def __init__(self, plan, style=None, provider=None, reels=None):
+        self.plan = planlib.load(plan)
+        self.style = load_style(style if style is not None else self.plan["style"])
+        o = self.plan.get("output") or {}
+        self.lang = _lang(self.plan, self.style)
+        self.provider = provider
+        self.fps = int(o.get("fps", 30))
+        self.max_pause = float(_g(self.style, "pacing", "max_pause", default=0.25) or 0.25)
+        self.reels = [r for r in self.plan["reels"] if reels is None or r["id"] in reels]
+        self.assets, self.transcripts, self.envelopes, self.errors = {}, {}, {}, {}
+        for key, ref in self.plan["sources"].items():
+            try:
+                a = self.assets[key] = store.get(ref)
+                self.transcripts[key] = _transcript(a, self.lang, provider)
+                if a.info.get("has_audio"):
+                    self.envelopes[key] = planlib.envelope(source.audio(a), cache=str(a.cache("envelope.npy")))
+            except Exception as e:
+                self.errors[key] = e
+                ff.log(f"source {key} ({ref}): {ff.describe(e)}")
+        self._copies = None
+        self.looks = {}
+
+    def check(self, reel):
+        """Raise the failure of a source this reel uses, if one failed."""
+        for key in _reel_sources(reel):
+            if key in self.errors:
+                raise RuntimeError(f"source {key}: {ff.describe(self.errors[key])}") from self.errors[key]
+
+    def copies(self):
+        if self._copies is None:
+            ranges = {}
+            for r in self.reels:
+                try:
+                    runs = planlib.resolve_reel(r, self.transcripts, self.envelopes, max_pause=self.max_pause)
+                except Exception:
+                    continue                     # that reel fails in its own compile
+                for run in runs:
+                    ranges.setdefault(run["src"], []).append((run["s"], run["e"]))
+            self._copies = {}
+            for key, rs in ranges.items():
+                try:
+                    self._copies[key] = source.prepare(self.assets[key], rs, fps=self.fps)
+                except Exception as e:           # its reels retry the preparation themselves
+                    ff.log(f"source {key}: editing copies failed: {ff.describe(e)}")
+        return self._copies
+
+    def shared(self):
+        """compile_reel keyword arguments for every reel of this context."""
+        return {"transcripts": self.transcripts, "copies": self.copies(), "envelopes": self.envelopes,
+                "looks": self.looks, "provider": self.provider}
+
+
+# ------------------------------------------------------------------ compile
+
+def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, envelopes=None, reframing=True,
+                 looks=None, provider=None):
+    """Write out_dir/timeline.json and out_dir/deps.json for one reel; returns the timeline's
+    path. transcripts / copies / envelopes / looks ({source key: look}, filled in when given)
+    are shared inputs (see Context); what is not given is made here."""
     plan = planlib.load(plan)
     style = load_style(style)
     out_dir = Path(out_dir)
@@ -337,16 +518,18 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     o = plan.get("output", {})
     W, H, fps = int(o.get("width", 720)), int(o.get("height", 1280)), int(o.get("fps", 30))
     k = H / float(_g(style, "sample", "height", default=H))
-    lang = o.get("lang") or _g(style, "audio", "speech", "lang", default="en") or "en"
+    lang = _lang(plan, style)
     assets = {key: store.get(ref) for key, ref in plan["sources"].items()}
-    transcripts = transcripts or {key: source.transcript(a, lang) for key, a in assets.items()}
-    envelopes = envelopes or {key: planlib.envelope(source.audio(a), cache=str(a.cache("envelope.npy")))
-                              for key, a in assets.items() if a.info.get("has_audio")}
+    if transcripts is None:
+        transcripts = {key: _transcript(a, lang, provider) for key, a in assets.items()}
+    if envelopes is None:
+        envelopes = {key: planlib.envelope(source.audio(a), cache=str(a.cache("envelope.npy")))
+                     for key, a in assets.items() if a.info.get("has_audio")}
     max_pause = float(_g(style, "pacing", "max_pause", default=0.25) or 0.25)
     runs = planlib.resolve_reel(reel, transcripts, envelopes, max_pause=max_pause)
     if not runs:
         raise ValueError(f"reel {reel['id']}: nothing left to play")
-    copies = copies or {}
+    copies = dict(copies or {})              # never add one reel's own copies to a shared dict
     for key in {r["src"] for r in runs}:
         if key not in copies:
             copies[key] = source.prepare(assets[key], [(r["s"], r["e"]) for r in runs if r["src"] == key], fps=fps)
@@ -414,7 +597,9 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                 clip["transition_in"] = {"type": special["type"], "dur": float(special.get("dur", 0.3))}
         scale_at = (lambda sc: (lambda tt: render.kf(sc, tt, 1.0)))(clip["scale"])
         if reframing:
-            info = probes.setdefault(m["path"], ff.probe(m["path"]))
+            info = probes.get(m["path"])
+            if info is None:                # setdefault would probe every time: its default is evaluated first
+                info = probes[m["path"]] = ff.probe(m["path"])
             rk = reframe.clip_keyframes(m["path"], off, dur, (W, H), scale_at, info=info, fps=fps)
             clip["x"], clip["y"] = rk["x"], rk["y"]
             clip["subject"] = rk["subject"]
@@ -511,10 +696,22 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     tl_grade = {key: g[key] for key in ("sharpen", "grain", "vignette") if g.get(key)}
     if g.get("look"):
         main = max({r["src"] for r in runs}, key=lambda s_: sum(r["e"] - r["s"] for r in runs if r["src"] == s_))
-        src_look = source.look(assets[main], copies[main])
+        if looks is not None and main in looks:
+            src_look = looks[main]
+        else:
+            src_look = source.look(assets[main], copies[main])
+            if looks is not None:
+                looks[main] = src_look
         lut = grade.build_lut(src_look, g["look"], strength=float(g.get("strength", 1.0)))
-        grade.write_cube(lut, out_dir / "look.cube")
-        tl_grade["lut"] = str((out_dir / "look.cube").resolve())
+        cube = out_dir / "look.cube"
+        tmp = out_dir / f".look.{os.getpid()}.tmp.cube"
+        try:                                 # a new file, never rewritten in place: renders hard-link it
+            grade.write_cube(lut, tmp)
+            os.replace(tmp, cube)
+        finally:
+            if tmp.exists():
+                tmp.unlink()
+        tl_grade["lut"] = str(cube.resolve())
 
     loud = o.get("loudness")
     if loud is None:          # the sample's own loudness, within broadcast-sane bounds
@@ -529,30 +726,22 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
           "meta": {"reel": reel["id"], "title": reel.get("title"), "runs": [{"src": r["src"], "s": r["s"], "e": r["e"]}
                                                                          for r in runs],
                    "words": [w["w"] for w in words]}}
+    # JSON round trip first: the dependencies (and the batch's render key) see what is on disk
+    tl = json.loads(json.dumps(tl, ensure_ascii=False))
+    deps = dependencies(tl, str(out_dir), plan, style, lang, provider, transcripts)
     path = out_dir / "timeline.json"
-    path.write_text(json.dumps(tl, indent=1, ensure_ascii=False))
+    fsutil.atomic_write_json(path, tl)
+    fsutil.atomic_write_json(out_dir / "deps.json", deps)
     return str(path)
 
 
-def compile_plan(plan, out_root, reels=None, reframing=True):
-    """Compile every reel (or the listed ids) of a plan; returns {reel_id: timeline path}."""
-    plan = planlib.load(plan)
-    style = load_style(plan["style"])
-    o = plan.get("output", {})
-    lang = o.get("lang") or _g(style, "audio", "speech", "lang", default="en") or "en"
-    assets = {key: store.get(ref) for key, ref in plan["sources"].items()}
-    transcripts = {key: source.transcript(a, lang) for key, a in assets.items()}
-    envelopes = {key: planlib.envelope(source.audio(a), cache=str(a.cache("envelope.npy")))
-                 for key, a in assets.items() if a.info.get("has_audio")}
-    max_pause = float(_g(style, "pacing", "max_pause", default=0.25) or 0.25)
-    wanted = [r for r in plan["reels"] if reels is None or r["id"] in reels]
-    ranges = {}
-    for r in wanted:
-        for run in planlib.resolve_reel(r, transcripts, envelopes, max_pause=max_pause):
-            ranges.setdefault(run["src"], []).append((run["s"], run["e"]))
-    copies = {key: source.prepare(assets[key], rs, fps=int(o.get("fps", 30))) for key, rs in ranges.items()}
+def compile_plan(plan, out_root, reels=None, reframing=True, provider=None):
+    """Compile every reel (or the listed ids) of a plan through one Context (editing copies
+    made once per source for the union of those reels' ranges); returns {reel_id: timeline path}."""
+    ctx = Context(plan, provider=provider, reels=reels)
     out = {}
-    for r in wanted:
-        out[r["id"]] = compile_reel(plan, r, style, Path(out_root) / "reels" / r["id"], transcripts=transcripts,
-                                    copies=copies, envelopes=envelopes, reframing=reframing)
+    for r in ctx.reels:
+        ctx.check(r)
+        out[r["id"]] = compile_reel(ctx.plan, r, ctx.style, Path(out_root) / "reels" / r["id"], reframing=reframing,
+                                    **ctx.shared())
     return out

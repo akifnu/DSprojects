@@ -4,20 +4,34 @@ Runs the text, picture and audio analysers, merges them into SPEC.md's style.jso
 and draws a review sheet that puts every measured element next to the real one
 (real caption crop beside the same words re-rendered from the measured style), so
 the spec can be verified by eye before a single reel is cut.
+
+style.json carries analysis.fingerprint: the analysis code, the language, the ASR
+fingerprint of the sample's transcript and the sample's content. A cached style that is
+unreadable or whose fingerprint is no longer current is measured again (a style verified
+in place by an earlier version, which has none, is kept); the orchestrator reuses a
+verified style only for the measurement it was verified against. style.json and
+review.jpg are written to unique temp names and renamed into place, one analysis per
+sample at a time.
 """
-import json
+import hashlib
+import os
 import re
 import statistics
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from pathlib import Path
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from . import asr, captions, ff, store
+from . import asr, captions, ff, fsutil, store
 
 SHEET_W = 1600
+ANALYSIS_CODE = ("sample.py", "sample_text.py", "sample_video.py", "sample_audio.py", "grade.py")
+LEGACY = "it predates analysis fingerprints"
 
 
 def _norm(w):
@@ -55,20 +69,94 @@ def _merge_audio(res):
     return audio, pacing, structure
 
 
-def analyze(ref, lang="en", force=False):
-    """Analyse a sample asset (id or path; ingested if needed) → style dict (cached)."""
-    from . import sample_audio, sample_text, sample_video
+@lru_cache(maxsize=1)
+def code_hash():
+    """The analysis code (analysers and merge), as one digest."""
+    h = hashlib.sha256()
+    for name in ANALYSIS_CODE:
+        h.update(name.encode())
+        try:
+            h.update(Path(__file__).with_name(name).read_bytes())
+        except OSError:
+            h.update(b"-")
+    return h.hexdigest()[:16]
+
+
+def fingerprint(asset, lang="en", asr_fp=None):
+    """What a measured style depends on; asr_fp is its transcript's fingerprint (None without audio)."""
+    return fsutil.sha256_json({"code": code_hash(), "lang": lang, "asr": asr_fp,
+                               "sample": asset.meta.get("sha256")})[:24]
+
+
+def _stale(style, a, lang, provider):
+    """Why a cached style must be measured again; None when it is current."""
+    an = style.get("analysis")
+    if not isinstance(an, dict) or not an.get("fingerprint"):
+        return LEGACY
+    if an.get("code") != code_hash():
+        return "the analysis code changed"
+    if an.get("lang") != lang:
+        return f"it was measured for language {an.get('lang')!r}"
+    if a.info.get("has_audio") and not asr.current(an.get("asr"), lang, provider):
+        return "its transcript's ASR models or settings changed"
+    if an["fingerprint"] != fingerprint(a, lang, an.get("asr")):
+        return "its fingerprint does not match"
+    return None
+
+
+def _cached(a, out, lang, provider, quiet=False):
+    """The cached style when readable and current (or verified in place by an earlier version)."""
+    if not out.exists():
+        return None
+    st = fsutil.read_json(out)
+    if not isinstance(st, dict) or not isinstance(st.get("sample"), dict):
+        if not quiet:
+            ff.log(f"sample {a.id}: style.json is unreadable; analysing again")
+        return None
+    why = _stale(st, a, lang, provider)
+    if why == LEGACY and isinstance(st.get("review"), dict) and st["review"].get("verified") is True:
+        if not quiet:
+            ff.log(f"sample {a.id}: keeping style.json verified in place by an earlier version ({why})")
+        return st
+    if why:
+        if not quiet:
+            ff.log(f"sample {a.id}: cached style is stale ({why}); analysing again")
+        return None
+    return st
+
+
+def analyze(ref, lang="en", force=False, provider=None):
+    """Analyse a sample asset (id or path; ingested if needed) → style dict (cached while its
+    fingerprint is current). provider: the ASR provider for its transcript (asr.transcribe)."""
     try:
         a = store.get(ref)
     except KeyError:
         a = store.ingest(ref, "sample")
-    out = a.cache("style.json")
-    if out.exists() and not force:
-        return json.loads(out.read_text())
+    out, sheet = a.cache("style.json"), a.cache("review.jpg")
+    style = None if force else _cached(a, out, lang, provider)
+    if style is None:
+        with fsutil.file_lock(out):
+            style = None if force else _cached(a, out, lang, provider, quiet=True)
+            if style is None:
+                style = _measure(a, lang, provider)
+                fsutil.atomic_write_json(out, style)
+                review_sheet(a, style, sheet)
+                ff.log(f"sample analysed in {style['analysis_seconds']}s → {out}")
+                return style
+    if not sheet.exists():
+        try:
+            review_sheet(a, style, sheet)
+        except Exception as e:      # the style stands; its review aid is missing
+            ff.log(f"sample {a.id}: review sheet could not be drawn ({ff.describe(e)})")
+    return style
+
+
+def _measure(a, lang, provider):
+    from . import sample_audio, sample_text, sample_video
     info, path = a.info, str(a.path)
     started = time.monotonic()
     with ThreadPoolExecutor(1) as pool:
-        tr_f = pool.submit(asr.transcribe, path, lang, str(a.cache(f"transcript.{lang}.json"))) \
+        tr_f = pool.submit(asr.transcribe, path, lang, str(a.cache(f"transcript.{lang}.json")), provider) \
             if info.get("has_audio") else None
         gray, _ = sample_video.decode_gray(path, info)
         text = sample_text.analyze_text(path, info, gray)
@@ -99,19 +187,19 @@ def analyze(ref, lang="en", force=False):
     structure = {"duration": round(info["duration"], 3), "hook": hook,
                  "cta": {"text": late[-1]["text"], "s": late[-1]["s"]} if late else None,
                  "loop": video.get("loop", False), **a_struct}
-    style = {"version": 2,
-             "sample": {"id": a.id, "name": a.meta["name"], "duration": round(info["duration"], 3),
-                        "width": info["width"], "height": info["height"], "fps": info["fps"]},
-             "pacing": {**video.get("pacing", {}), **a_pacing},
-             "shots": video["shots"], "motion": video.get("motion", {}), "transitions": video.get("transitions", {}),
-             "captions": captions_sec, "titles": titles, "overlays": overlays,
-             "grade": video.get("grade", {}), "audio": audio, "structure": structure,
-             "transcript": tr, "review": {"verified": False, "notes": []},
-             "analysis_seconds": round(time.monotonic() - started, 1)}
-    out.write_text(json.dumps(style, indent=1, ensure_ascii=False))
-    review_sheet(a, style, a.cache("review.jpg"))
-    ff.log(f"sample analysed in {style['analysis_seconds']}s → {out}")
-    return style
+    asr_fp = tr.get("fingerprint") if tr_f else None
+    seconds = round(time.monotonic() - started, 1)
+    return {"version": 2,
+            "sample": {"id": a.id, "name": a.meta["name"], "duration": round(info["duration"], 3),
+                       "width": info["width"], "height": info["height"], "fps": info["fps"]},
+            "pacing": {**video.get("pacing", {}), **a_pacing},
+            "shots": video["shots"], "motion": video.get("motion", {}), "transitions": video.get("transitions", {}),
+            "captions": captions_sec, "titles": titles, "overlays": overlays,
+            "grade": video.get("grade", {}), "audio": audio, "structure": structure,
+            "transcript": tr, "review": {"verified": False, "notes": []},
+            "analysis": {"fingerprint": fingerprint(a, lang, asr_fp), "code": code_hash(), "lang": lang,
+                         "asr": asr_fp, "sample_sha256": a.meta.get("sha256"), "seconds": seconds},
+            "analysis_seconds": seconds}
 
 
 # ------------------------------------------------------------------ review sheet
@@ -133,7 +221,7 @@ def _label_font(size=18):
 def review_sheet(asset, style, out):
     """One image: header numbers, shots strip, every caption (real | re-rendered), grade."""
     path, info = str(asset.path), asset.info
-    f_small, f_big = _label_font(16), _label_font(22)
+    f_small = _label_font(16)
     rows = []
     # header
     p, au = style["pacing"], style.get("audio", {})
@@ -201,5 +289,16 @@ def review_sheet(asset, style, out):
     for r in rows:
         sheet.paste(r, (0, y))
         y += r.height + 4
-    sheet.save(out, quality=88)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(str(out))), prefix=os.path.basename(str(out)) + ".",
+                               suffix=".jpg")
+    os.close(fd)
+    try:
+        sheet.save(tmp, "JPEG", quality=88)
+        os.replace(tmp, out)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return out

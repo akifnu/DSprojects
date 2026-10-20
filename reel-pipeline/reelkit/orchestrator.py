@@ -214,9 +214,10 @@ def _append_event(jid, rec):
         ff.log(f"job {jid}: event not recorded ({e})")
 
 
-def _emit(jid, event, attempt=None, **kw):
-    """An event outside a state transaction (worker lifecycle)."""
-    _append_event(jid, {"at": _now(), "ts": round(time.time(), 3), "job": jid, "attempt": attempt, "event": event, **kw})
+def _emit(jid, event, attempt=None, stage=None, **kw):
+    """An event outside a state transaction (worker lifecycle): no revision of its own."""
+    _append_event(jid, {"at": _now(), "ts": round(time.time(), 3), "job": jid, "stage": stage, "attempt": attempt,
+                        "revision": None, "event": event, **kw})
 
 
 def _ev(job, event, **kw):
@@ -554,7 +555,8 @@ def create(files=(), count=None, lang=None, duration=None, notes=None, kinds=Non
 def add(jid, files=(), roles=None):
     """More inputs for an open job. Completed work is kept: a step re-runs only where its inputs
     changed (per-asset caches make that incremental), and a pending need the new inputs make
-    stale (plan / review after new footage or music) is withdrawn."""
+    stale (plan / review after new footage or music) is withdrawn. Re-adding a file whose
+    intake failed (same path and role) retries it."""
     snap = _load(jid)
     entries = [{"path": p, "role": r} for r, ps in (roles or {}).items() for p in ps or []]
     entries += [{"path": p} for p in files or []]
@@ -566,18 +568,28 @@ def add(jid, files=(), roles=None):
     with _txn(jid) as job:
         if job["terminal"]:
             raise JobError(f"job {jid} is {job['status']}: start a new job for new work", code="terminal")
-        have = {(f["path"], f.get("role")) for f in job["files"]}
+        have = {(f["path"], f.get("role")): f for f in job["files"]}
         paths = {f["path"] for f in job["files"]}
-        new = [a for a in assets if (a["path"], a["role"]) not in have
-               and not (a["role_source"] == "heuristic" and a["path"] in paths)]
-        if not new:
+        new, again = [], []
+        for a in assets:
+            f = have.get((a["path"], a["role"]))
+            if f is not None:
+                if f.get("error") and not f.get("asset") and f not in again:
+                    again.append(f)
+            elif not (a["role_source"] == "heuristic" and a["path"] in paths):
+                new.append(a)
+        if not new and not again:
             job["_nosave"] = True
         else:
+            for f in again:                 # intake re-runs for it (_intake_ok)
+                f["retried"] = int(f.get("retried") or 0) + 1
+                f.pop("error", None)
             job["files"] += [{**a, "added_rev": job["revision"] + 1} for a in new]
             job["request"]["assets"] += [{"path": a["path"], "role": a["role"]} for a in new]
             job["request_hash"] = fsutil.sha256_json(job["request"])
             fsutil.atomic_write_json(_dir(jid) / "request.json", job["request"])
             job["inputs_rev"] = int(job.get("inputs_rev") or 0) + 1
+            new += [{"path": f["path"], "role": f["role"], "role_source": f.get("role_source")} for f in again]
             added, n = {a["role"] for a in new}, job.get("needs")
             if job["status"].startswith("waiting:"):
                 job["status"], job["waiting"] = "waiting:worker", []
@@ -1108,6 +1120,8 @@ def _need_review(job):
     for rid in todo:
         e = entries[rid]
         L = ledger.setdefault(rid, {})
+        if L.get("render_sha256") != e.get("render_sha256"):
+            L["requests"] = 0               # retries are counted per render
         L.update(requests=int(L.get("requests") or 0) + 1, assigned=nid)
         assigned.append({"id": rid, "render_sha256": e.get("render_sha256"), "qc_verdict": _qc(e),
                          "status": e.get("status"), "issues": e.get("issues") or [], "error": e.get("error"),
@@ -1275,7 +1289,8 @@ def _check_need(job, step, need_id, revision, sha):
     not waiting for exactly this step and need (stale or out of order)."""
     done = (job.get("completions") or {}).get(need_id)
     if done:
-        if done.get("step") == step and done.get("sha256") == sha:
+        # the submitted answer, or (plan) the plan.json the orchestrator rewrote on acceptance
+        if done.get("step") == step and sha is not None and sha in (done.get("sha256"), done.get("accepted_sha256")):
             return True
         raise Rejected(f"{need_id} was already completed with a different result",
                        [f"{need_id}: completed at {done.get('at')}"], code="already_completed")
@@ -1384,7 +1399,8 @@ def complete(jid, step, need_id=None, revision=None, note="", result_file=None, 
             need = job["needs"]
             _COMMIT_DONE[step](job, need, prep, note)
             done = job.setdefault("completions", {})
-            done[need_id] = {"step": step, "sha256": sha, "at": _now(), "revision": need.get("revision")}
+            done[need_id] = {"step": step, "sha256": sha, "at": _now(), "revision": need.get("revision"),
+                             "accepted_sha256": fsutil.sha256_json(prep["plan"]) if step == "plan" else None}
             for k in list(done)[:-100]:
                 del done[k]
             job["needs"] = None
@@ -1473,7 +1489,7 @@ def _c_intake(job, ctx, res):
             continue
         f = job["files"][i]
         if r.get("suggested_role") and not f.get("role"):
-            f.update(role=r["role"], suggested_role=r["suggested_role"], role_source="heuristic")
+            f.update(role=r["suggested_role"], suggested_role=r["suggested_role"], role_source="heuristic")
             if {"path": f["path"], "role": f["role"]} not in job["request"]["assets"]:
                 job["request"]["assets"].append({"path": f["path"], "role": f["role"]})
                 job["request_hash"] = fsutil.sha256_json(job["request"])
@@ -2044,7 +2060,7 @@ def work(jid, att, foreground=False):
                 hb.finish(code, err)
             else:
                 _end_attempt(jid, att, code, err)
-            _emit(jid, "worker_ended", att, exit=code, error=err)
+            _emit(jid, "worker_ended", att, stage=hb.stage if hb else None, exit=code, error=err)
         except BaseException as e:
             ff.log(f"job {jid}: attempt record not finished ({type(e).__name__}: {e})")
         finally:
@@ -2115,15 +2131,16 @@ def start(jid):
 def advance(jid):
     """Run the job in this process until it needs an agent or input, or ends — same run lock,
     attempt record and fencing as a detached worker. Returns the job (job["busy"] when another
-    worker owns it)."""
+    worker owns it; job["worker_exit"] = work()'s exit code when this call ran it)."""
     kind, att, _ = _claim(jid, foreground=True)
     if kind == "live":
         job = _load(jid)
         job["busy"] = True
         return job
-    if kind == "new":
-        work(jid, att, foreground=True)
-    return _load(jid)
+    code = work(jid, att, foreground=True) if kind == "new" else None
+    job = _load(jid)
+    job["worker_exit"] = code
+    return job
 
 
 def wait(jid, timeout=None, poll=2.0):
