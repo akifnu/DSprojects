@@ -38,7 +38,7 @@ def _t(dur):
     return np.arange(int(round(dur * SR))) / SR
 
 
-def _edges(x, fade_in=0.002, fade_out=0.008):
+def _edges(x, fade_in=0.0015, fade_out=0.008):
     """Raised-cosine fades at both ends (no click at start/end)."""
     n = x.shape[-1]
     a, b = max(2, int(fade_in * SR)), max(2, int(fade_out * SR))
@@ -49,8 +49,13 @@ def _edges(x, fade_in=0.002, fade_out=0.008):
 
 
 def _dc(x):
-    sos = signal.butter(2, 20, "hp", fs=SR, output="sos")
-    return signal.sosfiltfilt(sos, x, axis=-1)
+    """Remove DC: a 20 Hz high-pass on sustained sounds; on short transients (where a
+    filter would ring longer than the sound) subtract the mean under a Hann window."""
+    if x.shape[-1] > 0.25 * SR:
+        sos = signal.butter(2, 20, "hp", fs=SR, output="sos")
+        x = signal.sosfiltfilt(sos, x, axis=-1)
+    w = np.hanning(x.shape[-1])
+    return x - (x * w).sum(-1, keepdims=True) / w.sum() * w
 
 
 def _sweep_filter(noise, centers, q=1.4):
@@ -109,7 +114,7 @@ def swish(dur=0.22, variant=0, rng=None):
     peak = 0.4
     centers = np.where(u < peak, lo * (hi / lo) ** (u / peak), hi * (lo / hi) ** ((u - peak) / (1 - peak)))
     mono = _sweep_filter(rng.standard_normal(n), centers, q=1.1)
-    mono *= np.exp(-0.5 * ((u - peak) / 0.16) ** 2)
+    mono *= np.exp(-0.5 * ((u - peak) / 0.2) ** 2)
     return _pan(mono, np.linspace(-0.5, 0.5, n) * (1 if variant % 2 == 0 else -1))
 
 
@@ -130,7 +135,7 @@ def pop(dur=0.14, variant=0, rng=None):
 def click(dur=0.05, variant=0, rng=None):
     rng = rng or np.random.default_rng(400 + variant)
     t = _t(dur)
-    sos = signal.butter(2, [1500, 9000][0] if variant == 1 else 2500, "hp", fs=SR, output="sos")
+    sos = signal.butter(2, 1500 if variant == 1 else 2500, "hp", fs=SR, output="sos")
     burst = signal.sosfilt(sos, rng.standard_normal(len(t))) * np.exp(-t / [0.0025, 0.0035, 0.002][variant % 3])
     ring = np.sin(2 * np.pi * [3200, 2400, 4100][variant % 3] * t) * np.exp(-t / 0.004) * 0.4
     return _pan(burst + ring, [0.0, 0.15, -0.15][variant % 3])
@@ -201,11 +206,18 @@ def glitch(dur=0.32, variant=0, rng=None):
         pos += seg + int(rng.uniform(0.0, 0.01) * SR)
     sos = signal.butter(2, [150, 9000], "bp", fs=SR, output="sos")
     out = signal.sosfilt(sos, out)
-    return _pan(out, np.where(rng.random(n) > 0.5, 0.3, -0.3) * 0 + 0.0)
+    return _pan(out, 0.0)
 
 
 SYNTH = {"whoosh": whoosh, "swish": swish, "pop": pop, "click": click, "impact": impact, "riser": riser,
          "ding": ding, "glitch": glitch}
+
+
+def peak_offset(kind, variant=0, duration=None):
+    """Seconds from a sound's start to its loudest moment (where a whoosh 'passes')."""
+    st = synth(kind, variant, duration)
+    e = np.convolve(st.mean(0) ** 2, np.ones(int(0.02 * SR)) / int(0.02 * SR), "same")
+    return float(np.argmax(e) / SR)
 
 
 # ------------------------------------------------------------------ mastering + io
@@ -254,9 +266,9 @@ def measure(st):
     mono = st.mean(0)
     spec = np.abs(np.fft.rfft(mono * np.hanning(len(mono))))
     freqs = np.fft.rfftfreq(len(mono), 1 / SR)
-    edge = int(0.001 * SR)
+    edge = int(0.0005 * SR)
     return {"peak_dbtp": round(float(true_peak_db(st)), 2), "dc": float(np.abs(st.mean(1)).max()),
-            "edge": float(max(np.abs(st[:, :edge]).max(), np.abs(st[:, -edge:]).max())),
+            "start": float(np.abs(st[:, :edge]).max()), "end": float(np.abs(st[:, -edge:]).max()),
             "centroid": round(float((spec * freqs).sum() / (spec.sum() + 1e-12)), 1),
             "dur": round(st.shape[1] / SR, 3)}
 

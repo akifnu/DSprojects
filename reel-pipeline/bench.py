@@ -55,14 +55,15 @@ def fixtures(source=None):
                 "fps=30,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920",
                 "-c:v", "libx264", "-preset", "fast", "-crf", 14, "-g", 30, "-pix_fmt", "yuv420p", src)
         else:
-            # moving colour fields + a moving test pattern + temporal grain: harder to
-            # encode than most real footage, so speeds measured here are conservative
-            _ff("-f", "lavfi", "-i", "gradients=s=1080x1920:r=30:d=40:speed=0.012:nb_colors=4:"
+            #             # moving colour fields (rendered small, upscaled: they are smooth anyway), a moving
+            # test pattern and light camera-like grain — a typical 1080p mezzanine bitrate
+            _ff("-f", "lavfi", "-i", "gradients=s=270x480:r=30:d=40:speed=0.012:nb_colors=4:"
                 "c0=0x24476b:c1=0xd99a5b:c2=0x3f8f5f:c3=0xe8e2d0",
                 "-f", "lavfi", "-i", "testsrc2=s=600x600:r=30:d=40",
-                "-filter_complex", "[0][1]overlay=x='240+200*sin(t*0.7)':y='660+320*cos(t*0.45)',"
-                "noise=alls=8:allf=t,format=yuv420p",
-                "-c:v", "libx264", "-preset", "fast", "-crf", 14, "-g", 30, src)
+                "-filter_complex", "[0]scale=1080:1920:flags=bicubic[bg];"
+                "[bg][1]overlay=x='240+200*sin(t*0.7)':y='660+320*cos(t*0.45)',"
+                "noise=alls=3:allf=t,format=yuv420p",
+                "-c:v", "libx264", "-preset", "fast", "-crf", 16, "-g", 30, src)
     voice = BENCH / "voice.wav"
     if not voice.exists():
         _ff("-f", "lavfi", "-i", "anoisesrc=color=pink:amplitude=0.4:d=40:r=48000",
@@ -70,7 +71,7 @@ def fixtures(source=None):
     music = BENCH / "music.wav"
     if not music.exists():
         _ff("-f", "lavfi", "-i", "aevalsrc='0.2*sin(2*PI*220*t)+0.15*sin(2*PI*277.2*t)+0.12*sin(2*PI*329.6*t)"
-            "+0.05*sin(2*PI*55*t)*(mod(t,0.5)<0.08)':d=40:s=48000", music)
+            "+0.05*sin(2*PI*55*t)*lt(mod(t,0.5),0.08)':d=40:s=48000", music)
     sticker = BENCH / "sticker.png"
     if not sticker.exists():
         import cv2

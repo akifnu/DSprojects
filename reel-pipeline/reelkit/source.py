@@ -5,8 +5,9 @@ pipeline (≈ 0.5× real time on 4 cores), so it happens once per needed range:
 
   prepare(asset, ranges)   editing copies ("mezzanine") of the merged ranges plus
                            1 s handles — 30 fps, short side 1080, near-lossless short-GOP
-                           H.264 (CRF 12, keyframe every 0.5 s: every seek decodes ≤ 15
-                           frames), video only. Cached under data/assets/<id>/mezz/ and
+                           H.264 (ultrafast CRF 10: decoding the camera file is ~half the
+                           CPU, this keeps encoding cheap; keyframe every 0.5 s so a seek
+                           decodes ≤ 15 frames), video only. Cached under data/assets/<id>/mezz/ and
                            reused by any later request a cached copy already covers.
   audio(asset)             the whole soundtrack as 48 kHz FLAC (lossless; ~1 s per hour)
   transcript(asset, lang)  asr.transcribe, cached as transcript.<lang>.json
@@ -58,16 +59,22 @@ def _geometry(info, short_side):
 
 def _encode(src, info, s, e, out, fps, size, threads):
     w, h = size
-    vf = [f"fps={fps}", f"scale={w}:{h}:flags=lanczos", "setsar=1"]
+    # explicit colour interpretation: an untagged source would otherwise be converted
+    # implicitly when the copy is tagged BT.709 (measured: luma shifted by 1 level)
     cs = info.get("colorspace")
-    if cs == "bt709" or (cs in (None, "", "unknown") and min(info["width"], info["height"]) >= 720):
-        vf[1] += ":in_color_matrix=bt709:out_color_matrix=bt709"
+    hd = min(info["width"], info["height"]) >= 720
+    src_matrix = {"bt709": "bt709", "smpte170m": "bt601", "bt470bg": "bt601", "bt2020nc": "bt2020"}.get(
+        cs, "bt709" if hd else "bt601")
+    src_range = "pc" if info.get("color_range") in ("pc", "jpeg") else "tv"
+    vf = [f"fps={fps}", f"scale={w}:{h}:flags=lanczos+accurate_rnd+full_chroma_int:in_color_matrix={src_matrix}:"
+                        f"out_color_matrix=bt709:"
+                        f"in_range={src_range}:out_range=tv", "setsar=1"]
     tmp = str(out) + ".part.mp4"
     ff.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-threads", str(threads),
             "-ss", f"{s:.3f}", "-t", f"{e - s:.3f}", "-i", str(src), "-an", "-vf", ",".join(vf),
-            "-c:v", "libx264", "-preset", "faster", "-crf", "12", "-g", str(max(1, fps // 2)),
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "10", "-g", str(max(1, fps // 2)),
             "-keyint_min", str(max(1, fps // 2)), "-bf", "0", "-pix_fmt", "yuv420p",
-            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv",
             "-threads", str(threads), "-movflags", "+faststart", tmp], name=f"editing copy {s:.1f}-{e:.1f}s")
     os.replace(tmp, out)
 
