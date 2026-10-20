@@ -166,6 +166,8 @@ def ocr_samples(path, info):
     W -= W % 2
     H = int(round(info["height"] * W / info["width"] / 2)) * 2
     total = int(math.floor(info["duration"] * OCR_FPS + 1e-6))
+    if total < 1:
+        return [], (W, H)
     per = int(math.ceil(total / WORKERS))
     jobs = [(str(path), k / OCR_FPS, min(per, total - k), W, H) for k in range(0, total, per)]
     with ProcessPoolExecutor(len(jobs)) as pool:
@@ -793,7 +795,6 @@ def _anim_out(path, ev, info, ref):
     ws = [s.get("w", 0) / ref["w"] for s in st]
     if al[-1] < 0.75 and al[0] > 0.85:
         k = next((i for i in range(len(al)) if al[i] < 0.92), len(al))
-        dur = (len(al) - k) / fps
         shrink = ws[-1] < 0.9 and ws[-1] > 0
         return {"out": "pop" if shrink else "fade", "out_dur": round(max(1, len(al) - k) / fps, 3)}
     return {"out": "none"}
@@ -889,6 +890,7 @@ def _style_of(group, size, transcript=None):
         if sc and np.median(sc) > 1.03:
             h["scale"] = round(float(np.median(sc)), 2)
         if h:
+            h["rate"] = round(min(1.0, len(hl) / max(1, len(multi))), 2)    # share of captions with one
             style["highlight"] = h
     anims = Counter(g["anim"]["in"] for g in group if g.get("anim"))
     if anims:
@@ -983,6 +985,8 @@ def analyze_text(path, info, gray=None, transcript=None):
                 "box": [int(round(v)) for v in (e["m"]["box"]["bounds"] if e.get("m") and e["m"].get("box")
                                                   else e["box"])], "role": e["role"]}
     cap_style = _style_of(caps, (W0, H0)) if caps else None
+    if cap_style and cap_style.get("highlight"):
+        cap_style["highlight"]["mode"] = _highlight_mode(path, info, caps) or "active"
     wpc = [len(e["text"].split()) for e in caps]
     durs = [e["e"] - e["s"] for e in caps]
     lines = [len(e["lines"]) for e in caps]
@@ -1006,6 +1010,47 @@ def analyze_text(path, info, gray=None, transcript=None):
                       "box": [int(max(0, b[0] - pad)), int(max(0, b[1] - pad)), int(min(W0, b[2] + pad)),
                               int(min(H0, b[3] + pad))]})
     return {"captions": captions, "titles": titles_out, "overlays": overlays, "boxes": boxes}
+
+
+def _odd_word(frame, ev):
+    """Index of the one word coloured (or boxed) differently from the rest, -1 if none."""
+    m = ev["m"]
+    words = word_fills(frame, m, ev)
+    if len(words) < 2:
+        return None
+    base = np.median(np.array([w["color"] for w in words]), axis=0)
+    odd = [i for i, w in enumerate(words) if _de(w["color"], base) > 25]
+    boxy = [i for i, w in enumerate(words) if _de(w["around"], m["near"]) > 25]
+    one = odd if len(odd) == 1 else boxy if len(boxy) == 1 else []
+    return one[0] if one else -1
+
+
+def _highlight_mode(path, info, caps):
+    """'active' when the marked word moves along the caption as it is spoken (karaoke),
+    'keyword' when the same word stays marked for the caption's whole life. Compares the
+    marked word early and late in each caption (past its entrance, before its exit)."""
+    probes = []
+    for ev in caps:
+        if not ev.get("highlight") or ev.get("m") is None or len(ev["text"].split()) < 2:
+            continue
+        d = ev["e"] - ev["s"]
+        ta = math.ceil((ev["s"] + max(0.25, 0.3 * d)) * OCR_FPS) / OCR_FPS
+        tb = math.floor((ev["e"] - max(0.1, 0.15 * d)) * OCR_FPS) / OCR_FPS
+        if tb - ta >= 0.2 - 1e-6:
+            probes.append((ev, ta, tb))
+    if not probes:
+        return None
+    frames = _frames_at(path, info, [t for _, ta, tb in probes for t in (ta, tb)])
+    votes = Counter()
+    for ev, ta, tb in probes:
+        fa, fb = frames.get(round(ta, 3)), frames.get(round(tb, 3))
+        if fa is None or fb is None:
+            continue
+        ia, ib = _odd_word(fa, ev), _odd_word(fb, ev)
+        if ia is None or ib is None or (ia == -1 and ib == -1):
+            continue
+        votes["keyword" if ia == ib else "active"] += 1
+    return votes.most_common(1)[0][0] if votes else None
 
 
 def _group(evs, size):

@@ -19,8 +19,11 @@ Rules:
   line is weak; ends on a payoff, not mid-thought. No sentence reused across reels.
 - `title_text` only if the sample has a hook title (style.titles.present) — match its tone/length.
 - `caption_text` to fix transcript errors (names, numbers, jargon; for Hindi/Urdu write what the
-  sample's captions use — e.g. romanised lines). `emphasis` = 1–2 key words per caption if the
-  sample highlights words. `cta` only if the sample has one (style.structure.cta).
+  sample's captions use — e.g. romanised lines). `emphasis` = the key word of each caption when
+  the sample marks keywords (style.captions.style.highlight.mode == "keyword"); captions you give
+  none get their strongest word marked automatically at the sample's rate. With "active"
+  (karaoke) highlights, emphasis is not drawn. `cta` only if the sample has one (style.structure.cta).
+- `output.loudness`: leave it out — reels match the sample's measured loudness.
 - Large batches: read the transcript in chunks of ~400 lines, note candidates with sentence ids,
   then write all reels in one edit to plan.json. ids r01, r02, … in source order.
 - Fix rounds: change only the reels in `only`, exactly as each fix says; keep everything else.

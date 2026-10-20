@@ -7,21 +7,27 @@ compile_plan(plan, out_root)              every reel; editing copies are made on
 What the style decides (all px values are scaled by output_height / sample.height):
   pacing      shot length: long runs are split at word boundaries into shots near the
               sample's median shot length (a punch / re-frame, audio continuous)
-  motion      punch-in framing levels and how often they change; slow pushes
+  motion      punch-in framing levels and how often they change; slow pushes (in or out,
+              as the sample); quick zoom bursts inside shots, timed on a word onset
   transitions the special transition (zoom, flash, whip, dissolve …) at its rate, on
               jump cuts between runs
   captions    words per caption, chars per line, lines, case, lead, typography;
-              a caption never ends on a weak word ("the", "of", "and" …)
+              a caption never ends on a weak word ("the", "of", "and" …); keyword
+              highlights mark the plan's emphasis words, else one strong word per caption
   titles      hook title (if the plan gives title_text) and CTA styling
   grade       3D LUT from the source footage's look to the sample's look
-  audio       loudness target, music ducking depth, SFX on cuts / caption appearances
+  audio       loudness target, music ducking depth; SFX on cuts / caption appearances
+              with the sample's kind, rate, timing against the moment and level vs the voice
 The framing follows the speaker (reframe.py) and is clamped so the picture always
 covers the canvas.
 """
 import json
 import math
-import os
+import statistics
+from collections import Counter
 from pathlib import Path
+
+import numpy as np
 
 from . import ff, grade, plan as planlib, reframe, render, source, store
 
@@ -34,6 +40,8 @@ WEAK = {"the", "a", "an", "of", "to", "and", "on", "in", "at", "with", "for", "t
 END = (".", "?", "!", "…")
 
 QUALITY = {"final": {"preset": "medium", "crf": 17}, "draft": {"preset": "veryfast", "crf": 20}}
+ZOOMS = ("zoom_in", "zoom_out")
+VOICE_CHAIN_DB = 3.0      # approx. level change of render.py's voice chain (compressor + make-up) on speech
 
 
 # ------------------------------------------------------------------ style helpers
@@ -95,6 +103,8 @@ def chunk_captions(words, cfg, emphasis=()):
     lines = int(cfg.get("max_lines") or 2)
     lead = float(cfg.get("lead") or 0.0)
     emph = {_bare(w) for w in emphasis}
+    words = [dict(w, w=w["w"].strip()) for w in words if w["w"].strip()]
+
     def chars(ws):
         return sum(len(w["w"]) for w in ws) + max(0, len(ws) - 1)
 
@@ -196,6 +206,114 @@ def _every(rate):
     return 0 if not rate or rate <= 0 else max(1, int(round(1 / min(1.0, rate))))
 
 
+def _auto_keywords(events, rate):
+    """Keyword highlights mark about one word per caption (at the sample's rate): where
+    the plan's emphasis put none in a caption, mark its most substantial word."""
+    every = _every(rate)
+    for i, ev in enumerate(events):
+        ws = ev.get("words") or []
+        if not every or i % every or len(ws) < 2 or any(w.get("emph") for w in ws):
+            continue
+        cands = [w for w in ws if _bare(w["w"]) not in WEAK and len(_bare(w["w"])) > 2]
+        if cands:
+            max(cands, key=lambda w: len(_bare(w["w"])))["emph"] = True
+
+
+# ------------------------------------------------------------------ motion
+
+def _burst(z, mv, start, dur, words, emph):
+    """Scale keyframes of a quick zoom inside a shot (one of the sample's per-shot
+    `moves`): it starts on a word onset near the sample's timing, an emphasised word if
+    the shot has one, and holds to the cut. None if the shot is too short for it."""
+    length = max(0.1, float(mv["t1"]) - float(mv["t0"]))
+    lo, hi = 0.1, dur - length - 0.05
+    if hi < lo:
+        return None
+    inside = [w for w in words if start + lo <= w["s"] <= start + hi]
+    pref = [w for w in inside if _bare(w["w"]) in emph] or inside
+    want = start + min(hi, max(lo, float(mv["t0"])))
+    t0 = (min(pref, key=lambda w: abs(w["s"] - want))["s"] if pref else want) - start
+    sc = float(mv["scale"])
+    a, b = (z, z * sc) if sc >= 1 else (z / sc, z)        # a zoom-out starts tighter, never under-covers
+    return [[0, round(a, 4)], [round(t0, 3), round(a, 4)],
+            [round(t0 + length, 3), round(b, 4), mv.get("ease") or "out"]]
+
+
+# ------------------------------------------------------------------ sound effects
+
+def _sfx_profile(style):
+    """How the sample uses effects, per occasion (cut / caption appearance): the kind it
+    uses there, how often, where the sound's anchor sits relative to the moment (a
+    whoosh's or riser's loudest point, an impact's onset) and its level vs the voice."""
+    sx = _g(style, "audio", "sfx") or {}
+    evs = [e for e in sx.get("events") or [] if e.get("type")]
+    occasions = (("cut", [s_["s"] for s_ in (style.get("shots") or [])[1:]], sx.get("on_cut_rate")),
+                 ("caption", [e["s"] for e in (_g(style, "captions", "events") or [])], sx.get("on_caption_rate")))
+    prof = {}
+    for occ, times, rate in occasions:
+        if not rate or not times:
+            continue
+        hits = []
+        for e in evs:
+            a = e.get("end", e["t"]) if e["type"] == "riser" else e.get("anchor", e["t"])
+            c = min(times, key=lambda c: abs(a - c))
+            if abs(a - c) <= 0.2:
+                hits.append((e, a - c))
+        if hits:
+            kind = Counter(e["type"] for e, _ in hits).most_common(1)[0][0]
+            same = [(e, d) for e, d in hits if e["type"] == kind]
+            levels = [e["level_db"] for e, _ in same if e.get("level_db") is not None]
+            prof[occ] = {"kind": kind, "rate": rate, "offset": statistics.median([d for _, d in same]),
+                         "level_db": statistics.median(levels) if levels else None}
+        else:
+            types = sx.get("types") or {}
+            prof[occ] = {"kind": max(types, key=types.get) if types else ("whoosh" if occ == "cut" else "pop"),
+                         "rate": rate, "offset": 0.0, "level_db": None}
+    return prof
+
+
+_SOUNDS = {}
+
+
+def _sound(path, kind):
+    """(duration, anchor offset, level dBFS) of an effect file, measured the way the
+    sample analyser measures effects: loudest point / onset, and RMS over the same window."""
+    key = (path, kind)
+    if key not in _SOUNDS:
+        sr = 48000
+        x = ff.audio(path, sr).astype(np.float64)
+        n = len(x)
+        if not n:
+            _SOUNDS[key] = (0.0, 0.0, -120.0)
+            return _SOUNDS[key]
+        w = int(0.02 * sr)
+        pk = int(np.argmax(np.convolve(x ** 2, np.ones(w) / w, "same")))
+        if kind in ("whoosh", "swish", "riser"):
+            anchor = pk / sr
+            seg = x[max(0, pk - int(0.05 * sr)):pk + int(0.05 * sr)] if kind != "riser" else x
+        else:
+            on = int(np.argmax(np.abs(x) > 0.1 * np.abs(x).max()))
+            anchor = on / sr
+            seg = x[on:on + int(0.05 * sr)] if kind in ("pop", "impact", "ding") else x[on:]
+        rms = math.sqrt(float(np.mean(seg ** 2))) if len(seg) else 0.0
+        _SOUNDS[key] = (n / sr, anchor, 20 * math.log10(rms + 1e-9))
+    return _SOUNDS[key]
+
+
+def _voice_db(runs, envelopes):
+    """RMS level (dBFS) of the reel's speech, from the sources' 5 ms envelopes."""
+    parts = []
+    for r in runs:
+        env = (envelopes or {}).get(r["src"])
+        if env is None:
+            continue
+        for w in r["words"]:
+            a, b = int(w["s"] / planlib.HOP), int(math.ceil(w["e"] / planlib.HOP))
+            parts.append(np.asarray(env[max(0, a):max(0, b)], np.float64))
+    x = np.concatenate(parts) if parts else np.zeros(0)
+    return 20 * math.log10(math.sqrt(float(np.mean(x ** 2))) + 1e-9) if len(x) else None
+
+
 # ------------------------------------------------------------------ compile
 
 def _sfx_path(kind, plan):
@@ -254,6 +372,14 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     levels = [max(1.0, x / base) for x in levels]           # relative to the widest framing
     punch_every = _every(mot.get("punch_rate"))
     push_every = _every(mot.get("push_rate"))
+    st_shots = style.get("shots") or []
+    pushes = [s_["move"]["type"] for s_ in st_shots if (s_.get("move") or {}).get("type") in ZOOMS]
+    push_out = sum(t_ == "zoom_out" for t_ in pushes) > len(pushes) / 2
+    bursts = [m_ for s_ in st_shots for m_ in (s_.get("moves") or []) if m_.get("type") in ZOOMS and m_.get("scale")]
+    burst_every = _every(sum(1 for s_ in st_shots if any(m_.get("type") in ZOOMS for m_ in s_.get("moves") or []))
+                         / max(1, len(st_shots))) if bursts else 0
+    emph = {_bare(w) for w in reel.get("emphasis", ())}
+    n_burst = 0
     special = _g(style, "transitions", "special") or {}
     trans_every = _every(special.get("rate")) if special.get("type") not in (None, "cut") else 0
     media, video, run_cut_count, probes = {}, [], 0, {}
@@ -268,9 +394,16 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
             level = (level + 1) % len(levels)
         z = levels[level]
         clip = {"media": mkey, "start": start, "in": off, "dur": dur, "fit": "cover"}
-        if push_every and n % push_every == 0 and dur > 0.8:
-            z1 = z * (1 + float(mot.get("push_scale_per_s", 0.03)) * dur)
-            clip["scale"] = [[0, round(z, 4)], [dur, round(z1, 4), mot.get("push_ease", "inout")]]
+        keys = None
+        if burst_every and (n + 1) % burst_every == 0:
+            keys = _burst(z, bursts[n_burst % len(bursts)], start, dur, words, emph)
+            n_burst += 1 if keys else 0
+        if keys:
+            clip["scale"] = keys
+        elif push_every and n % push_every == 0 and dur > 0.8:
+            z1 = z * (1 + float(mot.get("push_scale_per_s") or 0.03) * dur)
+            a_, b_ = (z1, z) if push_out else (z, z1)
+            clip["scale"] = [[0, round(a_, 4)], [dur, round(b_, 4), mot.get("push_ease") or "inout"]]
         else:
             clip["scale"] = round(z, 4)
         new_run = n > 0 and shots[n - 1][0] != ri
@@ -294,6 +427,9 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     if cap_cfg.get("present", True):
         styles["caption"] = scale_style(cap_cfg.get("style") or {}, k)
         cap_events = chunk_captions(words, cap_cfg, reel.get("emphasis", ()))
+        hl = styles["caption"].get("highlight") or {}
+        if hl.get("mode") == "keyword":
+            _auto_keywords(cap_events, hl.get("rate", 1.0))
     tit = style.get("titles") or {}
     styles["title"] = scale_style(tit.get("style") or cap_cfg.get("style") or {}, k)
     hook_dur = float(_g(style, "structure", "hook", "dur", default=2.0) or 2.0)
@@ -341,29 +477,34 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                           "gain_db": music.get("gain_db", -16), "fade_in": 0.02 if t0 else 0, "fade_out": 0.3})
             t0 += d
     sfx_cfg = _g(style, "audio", "sfx") or {}
-    types = sfx_cfg.get("types") or {}
-    kind = max(types, key=types.get) if types else "whoosh"
-    sfx_gain = float(sfx_cfg.get("gain_db", -10))
-    cut_times = [c["start"] for c in video[1:]]
-    sfx_hits = []
-    ce = _every(sfx_cfg.get("on_cut_rate"))
-    if ce:
-        sfx_hits += [(t_, kind) for i, t_ in enumerate(cut_times) if (i + 1) % ce == 0]
-    pe = _every(sfx_cfg.get("on_caption_rate"))
-    if pe:
-        sfx_hits += [(c["s"], "pop") for i, c in enumerate(cap_events) if i % pe == 0]
-    for t_, kd in sfx_hits:
-        p = _sfx_path(kd, plan)
-        if not p:
+    prof = _sfx_profile(style)
+    voice_db = _voice_db(runs, envelopes)
+    moments = []
+    if "cut" in prof:
+        ce = _every(prof["cut"]["rate"])
+        moments += [(t_, prof["cut"]) for i, t_ in enumerate(c["start"] for c in video[1:]) if (i + 1) % ce == 0]
+    if "caption" in prof:
+        pe = _every(prof["caption"]["rate"])
+        taken = [t_ for t_, _ in moments]
+        moments += [(c["s"], prof["caption"]) for i, c in enumerate(cap_events)
+                    if i % pe == 0 and all(abs(c["s"] - t_) > 0.15 for t_ in taken)]
+    for t_, p in sorted(moments, key=lambda m_: m_[0]):
+        kd = p["kind"]
+        path_ = _sfx_path(kd, plan)
+        if not path_:
             continue
+        d, anchor, level = _sound(path_, kd)
+        st = t_ + p["offset"] - anchor
+        if d <= 0 or st < 0 or st > total - 0.05:
+            continue
+        if p["level_db"] is not None and voice_db is not None:
+            gain = p["level_db"] + voice_db + VOICE_CHAIN_DB - level
+        else:
+            gain = float(sfx_cfg.get("gain_db", -10))
         key = f"sfx_{kd}"
-        timeline_media.setdefault(key, p)
-        d = ff.probe(p)["duration"]
-        st = t_ - (d / 2 if kd == "whoosh" else 0.0)
-        if st < 0 or st + d > total + 0.5:
-            continue
+        timeline_media.setdefault(key, path_)
         clips.append({"media": key, "start": round(st, 3), "in": 0, "dur": round(min(d, total - st), 3),
-                      "role": "sfx", "gain_db": sfx_gain})
+                      "role": "sfx", "gain_db": round(min(12.0, max(-40.0, gain)), 1)})
 
     # ---- grade
     g = style.get("grade") or {}
@@ -375,7 +516,9 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
         grade.write_cube(lut, out_dir / "look.cube")
         tl_grade["lut"] = str((out_dir / "look.cube").resolve())
 
-    loud = o.get("loudness") or _g(style, "audio", "loudness", "I", default=-14.0) or -14.0
+    loud = o.get("loudness")
+    if loud is None:          # the sample's own loudness, within broadcast-sane bounds
+        loud = min(-7.0, max(-18.0, float(_g(style, "audio", "loudness", "I", default=-14.0) or -14.0)))
     music_cfg = _g(style, "audio", "music") or {}
     tl = {"width": W, "height": H, "fps": fps, "duration": total, "background": "#000000",
           "media": timeline_media, "video": video, "captions": cap_events, "text": text_events, "styles": styles,

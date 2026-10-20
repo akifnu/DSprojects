@@ -241,7 +241,7 @@ def _advance(job):
                 plan_p.write_text(json.dumps({
                     "name": job["id"], "style": job["inputs"]["samples"][0],
                     "output": {"width": 720, "height": 1280, "fps": 30, "quality": POLICY["render_quality"],
-                               "loudness": -14},
+                               "lang": job["request"]["lang"]},          # loudness: the sample's, unless set
                     "sources": dict(zip(keys, job["inputs"]["sources"])),
                     "music": {"asset": job["inputs"]["music"][0], "gain_db": -18} if job["inputs"]["music"] else None,
                     "sfx": None, "reels": []}, indent=1))

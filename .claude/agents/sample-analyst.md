@@ -13,7 +13,9 @@ Inputs (from the job's `needs`): style.json path, review.jpg path, job id. The s
 2. Where left and right differ, find out why and fix style.json → captions.style / titles.style:
    font family/weight, size, fill, stroke, box (colour, radius, padding, line vs block), shadow,
    highlight, case, y position, animation. Grab exact frames when needed:
-   `.tools/ffmpeg/bin/ffmpeg -v error -ss <t> -i <sample> -frames:v 1 /tmp/f.png` and Read them.
+   `reel-pipeline/.tools/ffmpeg/bin/ffmpeg -v error -ss <t> -i <sample> -frames:v 1 /tmp/f.png` and Read them.
+   Highlight `mode`: "active" = the marked word moves along as it is spoken (karaoke), "keyword" =
+   one word stays marked for the caption's whole life — check two frames of one caption.
 3. Sanity-check pacing (shot lengths, cuts/min, punch-ins / quick zoom `moves`), transitions,
    audio (music present? sfx types and on-cut rate, loudness) and structure (hook, CTA) against
    what you see in frames. Fix clear errors; don't invent detail you can't see.

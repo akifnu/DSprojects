@@ -495,6 +495,8 @@ def _dings(f):
     rise = v - np.concatenate([[v[0]] * 4, v[:-4]])
     for k in _peaks(rise, 15, FPS * 0.15):
         pk = k + int(np.argmax(v[k:k + 4]))
+        if pk + int(0.3 * FPS) >= f.n:
+            continue                                  # too close to the end to see it ring
         fq, prom, harm = _peak_partial(_onset_spec(f.P, pk, 6), 0, 700, 7000)
         if prom < 22:
             continue
@@ -505,7 +507,7 @@ def _dings(f):
             continue
         bi = int(round(fq / (SR / NFFT)))
         line = 10 * np.log10(f.P[max(0, bi - 1):bi + 2].sum(0) + 1e-10)      # that partial's own level
-        if pk + int(0.3 * FPS) >= f.n or line[pk] - line[max(0, pk - int(0.05 * FPS)):pk - 2].min(initial=line[pk]) < 15:
+        if line[pk] - line[max(0, pk - int(0.05 * FPS)):pk - 2].min(initial=line[pk]) < 15:
             continue
         later = line[pk + int(0.22 * FPS):pk + int(0.28 * FPS)].mean()
         if not (line[pk] - 20 <= later <= line[pk] - 2):                     # rings, and decays

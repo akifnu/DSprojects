@@ -9,7 +9,9 @@ Style keys (all optional; sizes in px at the timeline's canvas size):
   max_width, x, y (centre offset from canvas centre), letter_spacing,
   stroke {color, width}, shadow {color, opacity, blur, dx, dy},
   box {color, opacity, radius, pad_x, pad_y, mode: "line"|"block"},
-  highlight {fill, box {color, opacity, radius, pad_x, pad_y}, scale},   active word
+  highlight {fill, box {color, opacity, radius, pad_x, pad_y}, scale,
+             mode: "active" (the word being spoken, karaoke) | "keyword" (the event's
+             emphasised words, for its whole duration), rate}
   anim {in: none|pop|fade|slide_up|slide_down|zoom|word_reveal, in_dur, overshoot,
         out: none|fade|pop, out_dur, slide_px}
 """
@@ -118,10 +120,12 @@ def layout(text, s, scale=1.0):
     return font, space, [l for l in lines if l]
 
 
-def render(text, style, canvas_w, highlight=None, scale=1.0, reveal=None):
+def render(text, style, canvas_w, highlight=None, scale=1.0, reveal=None, emph=()):
     """RGBA patch (PIL Image) of a text event and the offset of its centre.
-    highlight: index of the active word; reveal: number of words visible."""
+    highlight: index of the active word; emph: indices of words drawn in the highlight
+    look throughout; reveal: number of words visible."""
     s = resolve(style, canvas_w)
+    marked = set(emph or ()) | ({highlight} if highlight is not None else set())
     font, space, lines = layout(text, s, scale)
     asc, desc = font.getmetrics()
     lh = s["size"] * scale * s["line_height"]
@@ -139,8 +143,7 @@ def render(text, style, canvas_w, highlight=None, scale=1.0, reveal=None):
     # neighbours instead of overlapping them
     wlist, k = [], 0
     for line in lines:
-        wlist.append([(hl_font if (highlight is not None and k + i == highlight) else font).getlength(w)
-                      for i, w in enumerate(line)])
+        wlist.append([(hl_font if k + i in marked else font).getlength(w) for i, w in enumerate(line)])
         k += len(line)
     widths = [sum(ws) + space * (len(ws) - 1) for ws in wlist]
     block_w = max(widths) if widths else 0
@@ -174,7 +177,7 @@ def render(text, style, canvas_w, highlight=None, scale=1.0, reveal=None):
                               margin + lh * len(lines) + pad_y], radius=box.get("radius", 0.25 * s["size"]) * scale,
                              fill=rgba(box.get("color", "#000000"), box.get("opacity", 1)))
     for k_, w, x, cy, ww in words_xy:
-        active = highlight is not None and k_ == highlight
+        active = k_ in marked
         if active and hl.get("box"):
             hb = hl["box"]
             px, py = hb.get("pad_x", 0.12 * s["size"]) * scale, hb.get("pad_y", 0.08 * s["size"]) * scale
@@ -214,11 +217,16 @@ class TextEvent:
         self.style = resolve(style, canvas[0])
         self.canvas = canvas
         self.cache = {}
+        hl = self.style.get("highlight") or {}
+        self.keyword = hl.get("mode") == "keyword"
+        # keyword highlights mark the event's emphasised words; their indices follow the
+        # caption text's words, which the compiler builds from the same word list
+        self.emph = tuple(i for i, w in enumerate(self.words) if w.get("emph")) if self.keyword else ()
 
     def _state(self, t):
         a = self.style.get("anim") or {}
         hl = None
-        if self.style.get("highlight") and self.words:
+        if self.style.get("highlight") and self.words and not self.keyword:
             for i, w in enumerate(self.words):
                 if w["s"] <= t < (self.words[i + 1]["s"] if i + 1 < len(self.words) else self.e):
                     hl = i
@@ -253,7 +261,8 @@ class TextEvent:
         hl, reveal, scale, alpha, dy = self._state(t)
         key = (hl, reveal, scale)
         if key not in self.cache:
-            img, (cx, cy) = render(self.text, self.style, self.canvas[0], highlight=hl, scale=scale, reveal=reveal)
+            img, (cx, cy) = render(self.text, self.style, self.canvas[0], highlight=hl, scale=scale, reveal=reveal,
+                                   emph=self.emph)
             arr = np.asarray(img, np.float32) / 255.0
             self.cache[key] = (arr[..., 2::-1] * arr[..., 3:4], arr[..., 3], cx, cy)
         rgb, a, cx, cy = self.cache[key]

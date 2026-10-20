@@ -81,7 +81,9 @@ compiler scales them by `out_height / sample.height`.
  "captions": {
    "present": true,
    "style": {},                      // captions.py style dict (font, weight, size, fill, stroke,
-                                     //   shadow, box, highlight, anim, case, y, max_width, line_height)
+                                     //   shadow, box, highlight, anim, case, y, max_width, line_height);
+                                     //   highlight.mode "active" (karaoke) | "keyword" (one word per
+                                     //   caption stays marked), highlight.rate = share of captions marked
    "words_per_caption": {"median": 3, "max": 5},
    "max_lines": 2, "chars_per_line": 22,
    "duration": {"median": 1.2, "min": 0.4},
@@ -113,7 +115,8 @@ compiler scales them by `out_height / sample.height`.
 {
  "name": "podcast-ep12",
  "style": "<sample asset id>" | "path/to/style.json",
- "output": {"width": 720, "height": 1280, "fps": 30, "quality": "final" | "draft", "loudness": -14},
+ "output": {"width": 720, "height": 1280, "fps": 30, "quality": "final" | "draft", "lang": "en",
+            "loudness": -14},                     // optional; default = the sample's (clamped −18…−7 LUFS)
  "sources": {"S": "<source asset id>"},
  "music": {"asset": "<id>", "gain_db": -18} | null,
  "sfx": {"whoosh": "<asset id>"} | null,            // null = library/sfx defaults
@@ -124,7 +127,7 @@ compiler scales them by `out_height / sample.height`.
    "hook": {"src": "S", "sentences": [128]},       // optional cold open, placed first
    "title_text": "STOP doing this",                 // optional on-screen hook title
    "caption_text": {"121": "corrected sentence"},  // optional per-sentence caption fixes
-   "emphasis": ["never", "free"],                  // optional words to highlight
+   "emphasis": ["never", "free"],                  // optional keywords (drawn when highlight.mode = keyword)
    "cta": "Follow for part 2",                     // optional end text
    "drop_words": [[121, 3]]                        // optional (sentence id, word index) cuts
  }]

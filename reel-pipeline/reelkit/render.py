@@ -21,7 +21,8 @@ of the picture centre from the canvas centre:
    "audio": {"clips": [{"media": "m1", "start": 0, "in": 12.3, "dur": 2.1, "role": "voice",
                         "gain_db": 0, "fade_in": 0.008, "fade_out": 0.008, "mono": true}],
              "voice_chain": true, "duck_db": 12, "loudness": -14, "true_peak": -1},
-             (music is keyframe-ducked by duck_db wherever voice clips play)
+             (music is keyframe-ducked by duck_db wherever voice clips play; true_peak is the
+              delivery ceiling: loudnorm aims 0.5 dB under it so AAC encoding cannot overshoot)
    "encode": {"preset": "medium", "crf": 17}}
 
 Keyframes: [t, value] or [t, value, ease] with t relative to the clip's start; ease is
@@ -377,7 +378,7 @@ class Compositor:
             else:
                 self._draw(canvas, b, t, extra_scale=1 + 0.35 * (1 - ease("out_cubic", 2 * u - 1)))
         elif kind.startswith("whip"):
-            d = {"whip_left": (-1, 0), "whip_right": (1, 0), "whip_up": (0, -1), "whip_down": (0, 1)}[kind]
+            d = {"whip_left": (-1, 0), "whip_right": (1, 0), "whip_up": (0, -1), "whip_down": (0, 1)}.get(kind, (-1, 0))
             e = ease("inout_cubic", u)
             vel = 3 * (1 - abs(2 * u - 1)) * (W if d[0] else H) / max(1, tr.get("dur", 0.3) * self.fps)
             self._draw(canvas, a, t, dx=d[0] * W * e, dy=d[1] * H * e, blur=(d[0] * vel, d[1] * vel))
@@ -452,8 +453,8 @@ def render_video(tl, base_dir, out, draft=False, encoder="cpu", threads=0):
            *_encoder_args(enc, draft, encoder), "-g", str(int(round(fps))), "-bf", "2",
            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
            "-maxrate", "25M", "-bufsize", "50M", "-an", str(out)]
-    if threads:
-        cmd[1:1] = ["-threads", str(threads)]
+    if threads:                        # an output option: limits the encoder, not the raw input
+        cmd[-1:-1] = ["-threads", str(threads)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     started = time.monotonic()
     out_q = queue.Queue(maxsize=8)
@@ -557,7 +558,7 @@ def render_audio(tl, base_dir, out, tmp):
     wav = os.path.join(tmp, "mix.wav")
     ff.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", ";".join(graph),
             "-map", "[mix]", "-c:a", "pcm_f32le", wav], name="audio mix")
-    target, tp = a.get("loudness", -14.0), a.get("true_peak", -1.0)
+    target, tp = a.get("loudness", -14.0), a.get("true_peak", -1.0) - 0.5
     m = ff.loudnorm_measure(wav, target, tp)
     ff.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-i", wav, "-af", ff.loudnorm_filter(m, target, tp),
             "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-t", f"{dur:.4f}", out], name="audio master")

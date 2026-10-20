@@ -6,7 +6,7 @@
   reel sample REF [--lang en] [--force]      measured style spec + review sheet
   reel source REF [--lang en] [--prepare]    transcript (+ editing copy) of long-form footage
   reel transcript REF [--lang en]            compact sentence index for planning
-  reel plan NAME --style REF --source S=REF  scaffold data/batches/NAME/plan.json
+  reel plan NAME --style REF --source S=REF [--lang en]  scaffold data/batches/NAME/plan.json
   reel batch PLAN [-j N] [--draft] [--only r01,r02]
   reel render TIMELINE OUT [--draft] [--still T]
   reel qc MP4 [--timeline T] [--style S]
@@ -23,7 +23,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import ff, store
+from . import store
 from .paths import DATA, FFMPEG, MODELS
 
 
@@ -107,7 +107,7 @@ def cmd_plan(a):
     d.mkdir(parents=True, exist_ok=True)
     srcs = dict(s.split("=", 1) for s in a.source)
     plan = {"name": a.name, "style": _asset(a.style, "sample").id,
-            "output": {"width": 720, "height": 1280, "fps": 30, "quality": "final", "loudness": -14},
+            "output": {"width": 720, "height": 1280, "fps": 30, "quality": "final", "lang": a.lang},
             "sources": {k: _asset(v, "source").id for k, v in srcs.items()},
             "music": None, "sfx": None, "reels": []}
     p = d / "plan.json"
@@ -196,6 +196,7 @@ def main(argv=None):
     p.add_argument("name")
     p.add_argument("--style", required=True)
     p.add_argument("--source", action="append", required=True, help="KEY=asset-or-file")
+    p.add_argument("--lang", default="en")
     p.set_defaults(fn=cmd_plan)
     p = sub.add_parser("batch")
     p.add_argument("plan")

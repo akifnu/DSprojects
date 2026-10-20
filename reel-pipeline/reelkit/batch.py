@@ -226,7 +226,8 @@ def _render_job(job):
                 os.replace(tmp, out)
                 result["render_s"] = round(time.monotonic() - t0, 2)
             t0 = time.monotonic()
-            rep = qc.check(out, tl_path, style, asr=job["asr"], sheet_path=str(rdir / "sheet.jpg"))
+            rep = qc.check(out, tl_path, style, asr=job["asr"], lang=job.get("lang"),
+                           sheet_path=str(rdir / "sheet.jpg"))
             result["qc_s"] = round(time.monotonic() - t0, 2)
             (rdir / "qc.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False))
             result["verdict"] = rep["verdict"]
@@ -439,7 +440,8 @@ def run(plan_path, jobs=None, draft=False, only=None, encoder="cpu", asr=True, c
             cache = rdir / "cache.json"
             prev = json.loads(cache.read_text()) if cache.exists() else {}
             job = {"id": rid, "timeline": str(tl_path), "out": str(out), "draft": draft, "encoder": encoder,
-                   "style": str(style_p), "asr": asr, "key": key, "qc_key": qk}
+                   "style": str(style_p), "asr": asr, "key": key, "qc_key": qk,
+                   "lang": (plan.get("output") or {}).get("lang")}
             if prev.get("key") == key and out.exists() and (rdir / "qc.json").exists():
                 if prev.get("qc_key") == qk:
                     rep = json.loads((rdir / "qc.json").read_text())
@@ -523,7 +525,6 @@ def _deliver(plan, bdir, entries, width, elapsed, n_jobs, draft):
 def contact_sheet(rows, path, tw=144):
     """One frame (at 15 % of each reel) per reel, labelled, border = verdict."""
     import cv2
-    import numpy as np
     from PIL import Image, ImageDraw
     from .qc import VERDICT_COLOR, _font
     items = [e for e in rows if e.get("file")]
