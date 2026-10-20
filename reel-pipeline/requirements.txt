@@ -1,0 +1,8 @@
+# reelkit — pinned to the versions the test suite was run against
+numpy==2.5.3
+scipy==1.18.1
+opencv-python-headless==5.0.0.93
+pillow==12.3.0
+onnxruntime==1.29.0
+sherpa-onnx==1.13.8
+rapidocr-onnxruntime==1.2.3

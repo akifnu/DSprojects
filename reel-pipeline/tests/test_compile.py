@@ -69,7 +69,7 @@ class Units(unittest.TestCase):
         self.assertEqual([e["text"] for e in evs], ["First point", "Second one", "after pause"])
         self.assertTrue(evs[1]["words"][0].get("emph"))
         self.assertEqual(evs[2]["words"][0]["s"], 3.0)
-        self.assertAlmostEqual(evs[1]["e"], 1.3 + 0.25, delta=1e-6)   # ends after its last word before a pause
+        self.assertAlmostEqual(evs[1]["e"], 1.15 + 0.25, delta=1e-6)  # last word ends 1.15; +0.25 before a pause
 
     def test_style_px_scale(self):
         st = C.scale_style({"size": 56, "y": 200, "max_width": 0.8, "stroke": {"width": 5},

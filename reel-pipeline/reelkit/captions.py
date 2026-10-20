@@ -272,3 +272,11 @@ def blend(canvas, rgb, a, x0, y0):
     pr, pa = rgb[ya - y0:yb - y0, xa - x0:xb - x0], a[ya - y0:yb - y0, xa - x0:xb - x0, None]
     region = canvas[ya:yb, xa:xb].astype(np.float32)
     canvas[ya:yb, xa:xb] = np.clip(region * (1 - pa) + pr * 255.0, 0, 255).astype(np.uint8)
+
+
+def prefetch_fonts(families, weights=(400, 500, 600, 700, 800, 900), workers=8):
+    """Download (cache) Google Fonts files ahead of use — setup time, not analysis time."""
+    from concurrent.futures import ThreadPoolExecutor
+    jobs = [(f, w) for f in families for w in weights]
+    with ThreadPoolExecutor(workers) as pool:
+        return list(pool.map(lambda fw: font_file(*fw), jobs))

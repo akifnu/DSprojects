@@ -1,10 +1,13 @@
+# Render/batch worker for reelkit (CPU; on NVIDIA hosts pass --gpus all and use encoder=nvenc).
 FROM ubuntu:24.04
-
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+ENV DEBIAN_FRONTEND=noninteractive NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg python3 python3-pil ca-certificates fonts-liberation \
+      python3 python3-pip curl ca-certificates xz-utils bzip2 fonts-liberation fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app/reel-pipeline
-COPY scripts/fast_render.py scripts/fast_render.py
-ENTRYPOINT ["python3", "scripts/fast_render.py"]
+COPY requirements.txt setup.sh reel ./
+COPY reelkit ./reelkit
+COPY library ./library
+RUN pip install --break-system-packages --no-cache-dir -r requirements.txt && ./setup.sh
+ENV REELKIT_DATA=/data
+ENTRYPOINT ["./reel"]

@@ -221,6 +221,7 @@ class _Front:
         self.mid = _floored_db(_band(P, 160, 1600))
         self.hf = _floored_db(_band(P, 1000, 10500))
         self.full = _floored_db(_band(P, 300, 10500))
+        self.full_raw = _floored_db(_band(P, 30, 10500))
         m = (FREQS >= 300) & (FREQS < 10500)
         Pm = P[m] + 1e-12
         self.centroid = (Pm * FREQS[m, None]).sum(0) / Pm.sum(0)
@@ -328,7 +329,9 @@ def _impacts(f):
         body = slice(pk + int(0.08 * FPS), pk + int(0.14 * FPS))
         sub_dom = f.sub[body].mean() > f.low[body].mean() - 10      # a voice's sub leakage is ≥ 20 dB under it
         if len(later) and later.mean() > v[pk] - 20 and v[pk] > np.median(v) + 15 and sub_dom:
-            on = k - 5 + int(np.argmax(np.diff(v[max(0, k - 5):k + 1]) > 3)) if k >= 5 else k
+            w = f.full_raw[max(0, k - int(0.15 * FPS)):k + 2]          # the crack lands before the sub swells
+            jump = np.diff(w) if len(w) > 1 else np.zeros(1)
+            on = max(0, k - int(0.15 * FPS)) + int(np.argmax(jump)) + 1
             out.append({"t": on / FPS, "dur": 0.7, "sub": "impact", "type": "impact"})
     return out
 
@@ -360,7 +363,9 @@ def _whooshes(f, words):
         in_word = any(w["s"] - 0.03 <= t0 and t1 <= w["e"] + 0.05 for w in words)
         if sweep < 0.6 and (in_word or dur < 0.25):
             continue
-        out.append({"t": t0, "dur": round(dur, 3), "peak": k / FPS, "sub": "swish" if dur < 0.3 else "whoosh",
+        e = np.convolve(f.x[int(t0 * SR):int(t1 * SR)] ** 2, np.ones(int(0.02 * SR)) / int(0.02 * SR), "same")
+        peak = t0 + (int(np.argmax(e)) / SR if len(e) else (k - a) / FPS)
+        out.append({"t": t0, "dur": round(dur, 3), "peak": peak, "sub": "swish" if dur < 0.3 else "whoosh",
                     "type": "whoosh"})
     return out
 
@@ -469,29 +474,14 @@ def _rising_ridges(f, lo=150, hi=4000, cost=6.0, max_up=3, stall=0.15, leak=0.97
 
 
 def _risers(f):
-    """A steady crescendo over ≥ 0.4-0.6 s, by either sign: a pitched riser's rising ridge
-    (see _rising_ridges), or — for noise risers — the level rising ≥ 12 dB/s (r² ≥ 0.8)
-    with a rising centroid. Anchored at its loudest point (where it lands, the end)."""
+    """Pitched risers (see _rising_ridges). Anchored at their loudest point — where they land,
+    the end. Pure-noise risers with no partial are not detected (they read as whooshes)."""
     v = _smooth(f.full, int(0.03 * FPS))
-    lc = _smooth(np.log2(np.maximum(f.centroid, 50)), int(0.05 * FPS))
-    cands = list(_rising_ridges(f))
-    for L in (0.6, 0.9, 1.2, 1.6):
-        n = int(L * FPS)
-        s_, r2 = _running_fit(v, n)
-        cs, _ = _running_fit(lc, n)
-        ok = (s_ * FPS >= 12) & (r2 >= 0.8) & (cs * FPS > 0.3)
-        for k in np.where(ok & ~np.concatenate([[False], ok[:-1]]))[0]:
-            j = k
-            while j + 1 < f.n and ok[j + 1]:
-                j += 1
-            cands.append((k - n, j))
     out = []
-    for a, j in sorted(cands, key=lambda c: c[1]):
+    for a, j in _rising_ridges(f):
+        j = min(j, f.n - 1)
         end = j + int(np.argmax(v[j:j + int(0.1 * FPS)]))
-        if any(abs(end / FPS - o["end"]) < 0.3 for o in out):
-            continue
-        start = max(0, a)
-        out.append({"t": start / FPS, "end": (end + 1) / FPS, "dur": round((end + 1 - start) / FPS, 3),
+        out.append({"t": a / FPS, "end": (end + 1) / FPS, "dur": round((end + 1 - a) / FPS, 3),
                     "sub": "riser", "type": "riser"})
     return out
 
@@ -513,8 +503,12 @@ def _dings(f):
         fqs = [_peak_partial(f.P, pk + d, 700, 7000)[0] for d in (5, 15, 30)]
         if max(abs(x - fq) for x in fqs) > 0.03 * fq:
             continue
-        later = v[pk + int(0.22 * FPS):pk + int(0.28 * FPS)]
-        if not len(later) or later.mean() < v[pk] - 20:
+        bi = int(round(fq / (SR / NFFT)))
+        line = 10 * np.log10(f.P[max(0, bi - 1):bi + 2].sum(0) + 1e-10)      # that partial's own level
+        if pk + int(0.3 * FPS) >= f.n or line[pk] - line[max(0, pk - int(0.05 * FPS)):pk - 2].min(initial=line[pk]) < 15:
+            continue
+        later = line[pk + int(0.22 * FPS):pk + int(0.28 * FPS)].mean()
+        if not (line[pk] - 20 <= later <= line[pk] - 2):                     # rings, and decays
             continue
         on = k - 3 + int(np.argmax(np.diff(v[max(0, k - 3):k + 1]) > 6)) if k >= 3 else k
         out.append({"t": on / FPS, "dur": 0.8, "sub": "ding", "type": "ding"})
@@ -550,23 +544,16 @@ def _glitches(f):
     return out
 
 
-def _profile(f, t):
-    k = int(t * FPS)
-    return np.array([f.sub[k:k + 4].max(), f.low[k:k + 4].max(), f.mid[k:k + 4].max(), f.hf[k:k + 4].max()])
-
-
-def _drop_drums(f, cands, beats, period):
-    """With a music bed: candidates of a kind that keeps landing on the (half-)beat grid
-    with the same band profile are the drums, not effects."""
-    if period is None or not len(beats) or len(cands) < 4:
+def _drop_drums(cands, beats, period, tol=0.035):
+    """With a music bed: a class that keeps firing on the beat grid (beats, eighths,
+    sixteenths) is the music's drums — drop its on-grid hits."""
+    if period is None or len(beats) < 4 or len(cands) < 4:
         return cands
-    grid = np.sort(np.concatenate([beats, beats + period / 2]))
-    on = [c for c in cands if np.abs(grid - c["t"]).min() < 0.025]
-    if len(on) < 4:
-        return cands
-    prof = np.median([_profile(f, c["t"]) for c in on], axis=0)
-    return [c for c in cands if not (np.abs(grid - c["t"]).min() < 0.025 and
-                                     np.abs(_profile(f, c["t"]) - prof).max() < 6)]
+    grid = np.sort(np.concatenate([beats + q * period for q in (0, 0.25, 0.5, 0.75)]))
+    on = [np.abs(grid - c["t"]).min() < tol for c in cands]
+    if sum(on) >= 4 and sum(on) >= 0.4 * len(cands):
+        return [c for c, o in zip(cands, on) if not o]
+    return cands
 
 
 def detect_sfx(x, words, beats_info, f=None):
@@ -577,7 +564,7 @@ def detect_sfx(x, words, beats_info, f=None):
     found = {"glitch": _glitches(f), "riser": _risers(f), "whoosh": _whooshes(f, words), "impact": _impacts(f),
              "ding": _dings(f), "pop": _pops(f), "click": _transients(x)}
     for kind in ("impact", "pop", "click", "ding"):
-        found[kind] = _drop_drums(f, found[kind], beats, period)
+        found[kind] = _drop_drums(found[kind], beats, period)
     events, spans = [], []
 
     def inside(e, pad=0.03):
@@ -619,8 +606,8 @@ def music_bed(x, f, words, beats_info, sfx):
     spans = speech_spans(words)
     sp = _mask(spans, f.n)
     busy = np.zeros(f.n, bool)
-    for e in sfx:
-        busy[int(e["t"] * FPS):int((e.get("end") or e["t"] + e["dur"]) * FPS) + 1] = True
+    for e in sfx:                              # an effect and its tail (impacts / dings ring on)
+        busy[int(e["t"] * FPS):int(((e.get("end") or e["t"] + e["dur"]) + 0.6) * FPS) + 1] = True
     gap = ~sp & ~busy
     # drop the first/last 0.25 s of each gap (word edges, breaths)
     gap = ndimage.binary_erosion(gap, iterations=int(0.12 * FPS)) if gap.any() else gap

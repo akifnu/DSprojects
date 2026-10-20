@@ -30,7 +30,7 @@ VOWELS = [[(700, 90, 1.0), (1200, 110, 0.6), (2600, 150, 0.25)],
           [(400, 80, 1.0), (1900, 110, 0.6), (2600, 150, 0.3)]]
 
 
-def speech(duration, rng, start=0.4):
+def speech(duration, rng, start=0.4, sentence_gap=(0.45, 0.9)):
     """(signal, transcript). Sentences of words separated by short gaps; some words
     begin with an /s/ fricative."""
     y = np.zeros(int(duration * SR))
@@ -63,7 +63,7 @@ def speech(duration, rng, start=0.4):
             words[-1]["w"] += "."
             sents.append({"id": len(sents), "s": words[w0]["s"], "e": words[-1]["e"], "w0": w0, "w1": len(words) - 1,
                           "text": " ".join(w["w"] for w in words[w0:])})
-        t += rng.uniform(0.45, 0.9)
+        t += rng.uniform(*sentence_gap)
     return y, {"lang": "en", "timing": "word", "duration": duration, "words": words, "sentences": sents}
 
 
@@ -124,10 +124,35 @@ def rms(x):
     return float(np.sqrt(np.mean(x ** 2))) + 1e-12
 
 
-def mix(path, duration, rng, bpm=None, music_db=-14.0, duck_db=0.0, kinds=(), sfx_db=(-6, 0), with_speech=True):
-    """Write a 48 kHz stereo WAV; return truth dict."""
+def place_in_gaps(n, kinds, rng, sentences):
+    """Each SFX in its own sentence gap (where editors cut), starting just after the last word."""
+    y = np.zeros(n)
+    truth = []
+    gaps = [(a["e"], b["s"]) for a, b in zip(sentences, sentences[1:])]
+    for kind, (g0, g1) in zip(kinds, gaps):
+        v = int(rng.integers(0, sfx.VARIANTS[kind]))
+        st, _ = sfx.read_wav(sfx.get(kind, v))
+        mono = st.mean(0)
+        t = g0 + rng.uniform(0.05, 0.25)
+        a = int(t * SR)
+        if a + len(mono) >= n:
+            break
+        y[a:a + len(mono)] += mono
+        anchor = t + sfx.peak_offset(kind, v) if kind in ("whoosh", "swish") else (
+            t + len(mono) / SR if kind == "riser" else t)
+        truth.append({"kind": kind, "class": sfx.CLASS_OF[kind], "t": round(t, 3), "anchor": round(anchor, 3),
+                      "dur": len(mono) / SR})
+    return y, truth
+
+
+def mix(path, duration, rng, bpm=None, music_db=-14.0, duck_db=0.0, kinds=(), sfx_db=(-3, 3), with_speech=True,
+        in_gaps=True):
+    """Write a 48 kHz stereo WAV; return truth dict. With in_gaps, each SFX sits in a
+    sentence gap (sentences then leave 1.6-2.2 s between them)."""
     n = int(duration * SR)
-    sp, tr = speech(duration, rng) if with_speech else (np.zeros(n), {"words": [], "sentences": [], "lang": None})
+    gap = (1.6, 2.2) if (in_gaps and kinds and with_speech) else (0.45, 0.9)
+    sp, tr = speech(duration, rng, sentence_gap=gap) if with_speech else (
+        np.zeros(n), {"words": [], "sentences": [], "lang": None})
     sp_mask = np.zeros(n, bool)
     for w in tr["words"]:
         sp_mask[int(w["s"] * SR):int(w["e"] * SR)] = True
@@ -148,7 +173,10 @@ def mix(path, duration, rng, bpm=None, music_db=-14.0, duck_db=0.0, kinds=(), sf
             env = np.convolve(env, np.ones(k) / k, "same")
             mu *= 10 ** (-duck_db * np.clip(env, 0, 1) / 20)
         y += mu
-    fx, truth = place_sfx(n, list(kinds), rng, duration)
+    if in_gaps and with_speech and kinds:
+        fx, truth = place_in_gaps(n, list(kinds), rng, tr["sentences"])
+    else:
+        fx, truth = place_sfx(n, list(kinds), rng, duration)
     if len(truth):
         # each effect scaled to a level relative to the voice
         out = np.zeros(n)

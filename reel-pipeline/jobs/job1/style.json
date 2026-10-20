@@ -1,7 +1,0 @@
-{
-  "hook": "Excel Basics EVERY\nBeginner Must Know!!",
-  "cta": "Send this to a friend\nwho's new to Excel!!",
-  "caption": {"font": "Arimo", "weight": 700, "fontSize": 37, "bgColor": "#004B06", "bgOpacity": 1,
-              "textShadow": 0, "lineHeight": 1.25, "y": 53},
-  "zooms": [1.0, 1.25]
-}

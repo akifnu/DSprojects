@@ -3,7 +3,7 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/reel-pipeline/setup.sh", "timeout": 300 }
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/reel-pipeline/setup.sh", "timeout": 1500 }
         ]
       }
     ]

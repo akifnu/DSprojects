@@ -602,17 +602,27 @@ def _render_ref(text, family, weight):
     return _ref_cache[key]
 
 
+_weights_cache = {}
+
+
 def _font_weights(family):
     """Distinct font files for a family (weights that fall back to the same file collapse)."""
+    if family in _weights_cache:
+        return _weights_cache[family]
     seen, out = set(), []
     for w in WEIGHTS:
         try:
             p = C.font_file(family, w)
         except SystemExit:
             continue
-        if p not in seen and "liberation" not in p.lower() and "dejavu" not in p.lower():
-            seen.add(p)
+        if "liberation" in p.lower() or "dejavu" in p.lower():
+            continue
+        with open(p, "rb") as fh:
+            digest = hash(fh.read())          # a missing weight is cached as a copy of the nearest one
+        if digest not in seen:
+            seen.add(digest)
             out.append(w)
+    _weights_cache[family] = out
     return out
 
 
