@@ -14,7 +14,11 @@ of the picture centre from the canvas centre:
    "media": {"m1": "/abs/or/relative/path.mp4" | "asset:<id>"},
    "video": [{"media": "m1", "start": 0, "in": 12.3, "dur": 2.1, "fit": "cover",
               "scale": 1.0 | [[t, v, ease], ...], "x": 0, "y": 0, "rotation": 0, "opacity": 1,
-              "speed": 1.0, "track": 1, "transition_in": {"type": "dissolve", "dur": 0.3}}],
+              "speed": 1.0, "track": 1, "transition_in": {"type": "dissolve", "dur": 0.3},
+              "hold_last": false}],
+             (a source that runs out before its clip ends fails the render, beyond a couple
+              of frames of rate rounding, unless the clip sets hold_last: then its last
+              frame is held)
    "captions": [{"s": 0.2, "e": 1.4, "text": "...", "words": [{"w","s","e"}], "style": "caption"}],
    "styles": {"caption": {...captions.py style...}},
    "grade": {"lut": "x.cube", "sharpen": 0.3, "grain": 4, "vignette": 0.2},
@@ -30,16 +34,25 @@ the curve INTO that key: linear, in, out, inout, in_cubic, out_cubic, inout_cubi
 out_back, hold, or [x1, y1, x2, y2] (CSS cubic-bezier).
 Transitions (transition_in, centred on the cut): cut, dissolve, dip_black, dip_white,
 flash, zoom, whip_left, whip_right, whip_up, whip_down. Video tracks > 1 are overlays.
+
+Failures are bounded: one cancel flag and two deadlines (timeout_s for the whole render,
+stall_s without an encoded frame) govern every wait of the frame producer, the encoder
+writer, the decoders and the audio thread. On any failure the decoders, the encoder and
+the audio ffmpegs are stopped (SIGTERM, SIGKILL after a grace), threads are joined with
+bounded waits and RenderError is raised with .record = {"stage": video | audio | mux |
+compose | decode | timeout, "cmd", "returncode", "stderr_tail", "cause", "transient"}.
+The MP4 is written to a unique temp file beside `out` and renamed only when complete.
+Child processes stay in the caller's process group.
 """
 import json
 import math
 import os
 import queue
+import secrets
 import subprocess
-import threading
 import tempfile
+import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -48,6 +61,12 @@ import numpy as np
 
 from . import captions, ff
 from .paths import FFMPEG
+
+RENDERER_VERSION = 1     # bump whenever the same timeline can render to different pixels or audio
+STOP_GRACE = 2.0         # s from SIGTERM to SIGKILL, and for joining a thread once its process is gone
+HOLD_TOLERANCE = 2       # frames a source may fall short by (frame-rate rounding) before it is an error
+DECODE_STALL = 120.0     # s a decoder may go without a frame when no render deadline governs it
+PROBE_TIMEOUT = 120.0
 
 # ---------------------------------------------------------------- keyframes
 
@@ -109,13 +128,123 @@ def kf_max(spec, dur, default=1.0, samples=48):
     return max(kf(spec, dur * i / samples, default) for i in range(samples + 1))
 
 
+# ---------------------------------------------------------------- failures and deadlines
+
+class RenderError(RuntimeError):
+    """A failed render. .record has the keys of ff.FFError.record; its stage is one of
+    video | audio | mux | compose | decode | timeout."""
+
+    def __init__(self, stage, message, cmd=None, returncode=None, stderr_tail="", cause=None, transient=False):
+        if cause is not None:
+            message = f"{message}: {ff.describe(cause) if isinstance(cause, BaseException) else cause}"
+        self.record = ff.error_record(stage, cmd, returncode, stderr_tail, message, transient)
+        super().__init__(f"{stage}: {message}")
+
+    def __reduce__(self):
+        return ff.rebuild_error, (type(self), self.args, self.__dict__)
+
+    @classmethod
+    def wrap(cls, stage, message, exc):
+        """`exc` as a RenderError, keeping an ff record's command, exit code and stderr; an
+        ff timeout becomes stage timeout. A RenderError is returned as it is."""
+        if isinstance(exc, RenderError):
+            return exc
+        rec = getattr(exc, "record", None) or {}
+        if getattr(exc, "reason", None) == "timeout":
+            stage = "timeout"
+        return cls(stage, message, rec.get("cmd"), rec.get("returncode"), rec.get("stderr_tail", ""), exc,
+                   rec.get("transient", False))
+
+
+def _attach(err, p, rc):
+    """Give a deadline error the command, exit code and stderr of the process it caught."""
+    rec = ff.error_record(err.record["stage"], p.cmd, rc, p.tail())
+    err.record.update(cmd=rec["cmd"], returncode=rec["returncode"], stderr_tail=rec["stderr_tail"])
+
+
+class _EncoderGone(Exception):
+    """The encoder exited, or its pipe broke, while frames were still due."""
+
+
+class _Guard:
+    """What one render's threads share: the cancel flag, the wall and no-progress
+    deadlines and the first failure. Only the frame producer raises from check()."""
+
+    def __init__(self, timeout_s=None, stall_s=120):
+        self.cancel = threading.Event()
+        self.timeout_s = float(timeout_s) if timeout_s else None
+        self.stall_s = float(stall_s) if stall_s else None
+        now = time.monotonic()
+        self.deadline = now + self.timeout_s if self.timeout_s else None
+        self.progress = now          # when the encoder last took a frame
+        self.failure = None
+        self.hooks = []              # callables that raise when something they watch has died
+        self._lock = threading.Lock()
+
+    def note(self, err):
+        """Record a failure (the first one wins) and cancel everything."""
+        with self._lock:
+            if self.failure is None:
+                self.failure = err
+        self.cancel.set()
+
+    def remaining(self):
+        return None if self.deadline is None else max(0.0, self.deadline - time.monotonic())
+
+    def check(self, where=None, stall=True):
+        now, at = time.monotonic(), f" while {where}" if where else ""
+        if self.failure is None:
+            if self.deadline is not None and now > self.deadline:
+                self.note(RenderError("timeout", f"the render exceeded its {self.timeout_s:g}s limit{at}",
+                                      transient=True))
+            elif stall and self.stall_s and now - self.progress > self.stall_s:
+                self.note(RenderError("timeout", f"no frame encoded for {self.stall_s:g}s{at}", transient=True))
+        if self.failure is not None:
+            raise self.failure
+        for hook in self.hooks:
+            hook()
+        if self.cancel.is_set():
+            raise RenderError("video", "the render was cancelled")
+
+
+def _step_timeout(guard, dur):
+    """A bound for one ffmpeg step: what is left of the wall time or, without a wall
+    limit, stall_s plus 20× the reel's length (generous, but never unbounded)."""
+    if guard is None:
+        return None
+    left = guard.remaining()
+    if left is not None:
+        return max(1.0, left)
+    return guard.stall_s + 20.0 * float(dur) if guard.stall_s else None
+
+
+def _unlink(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
+def _quietly(fn, what):
+    try:
+        fn()
+    except Exception as e:      # cleanup must not hide the error being reported
+        ff.log(f"{what}: {ff.describe(e)}")
+
+
 # ---------------------------------------------------------------- sources
+
+_END = object()                 # a clean end of decode, in a Reader's queue
+
 
 class Reader:
     """Sequential frames of one clip window, decoded by ffmpeg at a working size
-    chosen so the per-frame warp rarely has to shrink the picture by much."""
+    chosen so the per-frame warp rarely has to shrink the picture by much.
+    A decoder failure, or a source that runs out more than HOLD_TOLERANCE frames before
+    the clip ends (unless the clip sets hold_last), raises RenderError (stage decode).
+    close() before the end is a clean cancel."""
 
-    def __init__(self, path, info, clip, canvas, fps, pre, post, from_t=None):
+    def __init__(self, path, info, clip, canvas, fps, pre, post, from_t=None, guard=None):
         W, H = canvas
         sw, sh = info["width"], info["height"]
         fit = clip.get("fit", "cover")
@@ -139,57 +268,103 @@ class Reader:
         cs = info.get("colorspace")
         if cs == "bt709" or (cs in (None, "", "unknown") and min(sw, sh) >= 720):
             vf.append("scale=in_color_matrix=bt709")   # HD without a tag is BT.709, not ffmpeg's BT.601 default
-        self.gen = ff.frames(path, self.ww, self.wh, fps=fps, start=max(0.0, src_start),
-                             duration=(pre + clip["dur"] + post) * self.speed + 1.0, vf=",".join(vf) or None)
+        self.label = f"clip at {clip['start']:.2f}s ({os.path.basename(path)})"
+        self.hold_last = bool(clip.get("hold_last"))
+        self.guard = guard
+        self.stall_s = guard.stall_s if guard is not None else DECODE_STALL
+        self.proc = ff.Proc(ff.frames_cmd(path, self.ww, self.wh, fps=fps, start=max(0.0, src_start),
+                                          duration=(pre + clip["dur"] + post) * self.speed + 1.0,
+                                          vf=",".join(vf) or None), "decode", stdout=subprocess.PIPE)
         self.idx = -1
         self.cur = None
         self.fps = fps
+        self.eof = False
         # decode ahead on a thread: the OS pipe holds only 64 KB, so without this
         # ffmpeg would wait for the compositor and the compositor for ffmpeg
         self.q = queue.Queue(maxsize=6)
-        self.stop = False
-        self.thread = threading.Thread(target=self._pump, daemon=True)
+        self.stop = False                # set by close(): the frames are no longer wanted
+        self.thread = threading.Thread(target=self._pump, daemon=True, name="reel-decode")
         self.thread.start()
 
     def _pump(self):
+        end = _END
         try:
-            for fr in self.gen:
-                while not self.stop:
-                    try:
-                        self.q.put(fr, timeout=0.2)
-                        break
-                    except queue.Full:
-                        continue
-                if self.stop:
+            for fr in ff.read_frames(self.proc, self.ww, self.wh):
+                if not self._put(fr):
                     return
-        finally:
-            self.q.put(None)
+        except Exception as e:           # nonzero exit, a cut-off frame (or close() killing it)
+            end = e
+        self._put(end)
+
+    def _put(self, item):
+        while not self.stop:
+            try:
+                self.q.put(item, timeout=0.2)
+                return True
+            except queue.Full:
+                pass
+        return False
 
     def _next(self):
-        return None if self.stop else self.q.get()
+        """The next decoded frame; None once the decode has ended cleanly."""
+        waited = time.monotonic()
+        while True:
+            try:
+                item = self.q.get(timeout=0.25)
+                break
+            except queue.Empty:
+                pass
+            if self.guard is not None:
+                try:
+                    self.guard.check(f"waiting for the decoder of the {self.label}")
+                except RenderError as e:
+                    if e.record["stage"] == "timeout" and not e.record["cmd"]:
+                        _attach(e, self.proc, self.proc.proc.poll())
+                    raise
+            if self.stall_s and time.monotonic() - waited > self.stall_s:
+                raise RenderError("timeout", f"the decoder of the {self.label} gave no frame for {self.stall_s:g}s",
+                                  self.proc.cmd, self.proc.proc.poll(), self.proc.tail(), transient=True)
+            if not self.thread.is_alive() and self.q.empty():
+                raise RenderError("decode", f"the decoder thread of the {self.label} ended without a result",
+                                  self.proc.cmd, self.proc.proc.poll(), self.proc.tail())
+        if item is _END:
+            return None
+        if isinstance(item, BaseException):
+            raise RenderError.wrap("decode", f"decoding the {self.label} failed", item) from item
+        return item
 
     def at(self, t):
         k = int(round((t - self.first) * self.fps)) - self.hold_head
-        while self.idx < k:
+        while self.idx < k and not self.eof:
             nxt = self._next()
             if nxt is None:
-                self.stop = True
-                break                       # source ran out: hold the last frame
+                self.eof = True
+                break
             self.cur, self.idx = nxt, self.idx + 1
-        if self.cur is None and not self.stop:
-            self.cur = self._next()
-            self.idx = 0
+        if self.cur is None and not self.eof:      # inside the held head: the first frame
+            nxt = self._next()
+            self.eof = nxt is None
+            if nxt is not None:
+                self.cur, self.idx = nxt, 0
+        if self.cur is None:
+            raise RenderError("decode", f"no frames decoded for the {self.label}", self.proc.cmd,
+                              self.proc.proc.poll(), self.proc.tail())
+        if self.eof and k - self.idx > HOLD_TOLERANCE and not self.hold_last:
+            raise RenderError("decode", f"the source of the {self.label} ran out {k - self.idx} frames early "
+                                        f"(a clip may hold its last frame only with \"hold_last\": true)",
+                              self.proc.cmd, self.proc.proc.poll(), self.proc.tail())
         return self.cur
 
     def close(self):
         self.stop = True
+        self.proc.terminate(kill=True)             # a decoder mid-frame or blocked on the pipe ends now
         try:
             while True:
                 self.q.get_nowait()
         except queue.Empty:
             pass
-        self.thread.join(timeout=2)
-        self.gen.close()
+        self.thread.join(timeout=STOP_GRACE)
+        self.proc.close(pipes=not self.thread.is_alive())
 
 
 def _resolve(ref, base):
@@ -245,8 +420,9 @@ def _motion_blur(img, dx, dy):
 
 
 class Compositor:
-    def __init__(self, tl, base_dir):
+    def __init__(self, tl, base_dir, guard=None):
         self.tl = tl
+        self.guard = guard
         self.W, self.H, self.fps = tl["width"], tl["height"], tl["fps"]
         self.N = int(round(tl["duration"] * self.fps))
         self.bg = np.array(captions.rgba(tl.get("background", "#000000"))[:3][::-1], np.uint8)
@@ -274,15 +450,22 @@ class Compositor:
 
     def _info(self, path):
         if path not in self.info:
-            self.info[path] = ff.probe(path)
+            try:
+                self.info[path] = ff.probe(path, timeout=PROBE_TIMEOUT)
+            except ff.FFError as e:
+                raise RenderError.wrap("decode", f"cannot probe {path}", e) from e
         return self.info[path]
 
     def _reader(self, c):
         key = id(c)
         if key not in self.readers:
             path = self.media[c["media"]]
-            self.readers[key] = Reader(path, self._info(path), c, (self.W, self.H), self.fps, c["_tin"], c["_tout"],
-                                       from_t=self.from_t)
+            info = self._info(path)
+            try:
+                self.readers[key] = Reader(path, info, c, (self.W, self.H), self.fps, c["_tin"], c["_tout"],
+                                           from_t=self.from_t, guard=self.guard)
+            except ff.FFError as e:
+                raise RenderError.wrap("decode", f"cannot start decoding {path}", e) from e
         return self.readers[key]
 
     def _retire(self, t):
@@ -294,6 +477,8 @@ class Compositor:
         path = self.media[c["media"]]
         if path not in self.images:
             img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+            if img is None:
+                raise RenderError("compose", f"cannot read the image {path}")
             if img.ndim == 2:
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGRA)
             elif img.shape[2] == 3:
@@ -402,9 +587,9 @@ class Compositor:
         return canvas
 
     def close(self):
-        for r in self.readers.values():
-            r.close()
-        self.readers.clear()
+        readers, self.readers = list(self.readers.values()), {}
+        for r in readers:
+            _quietly(r.close, "closing a decoder")
 
 
 # ---------------------------------------------------------------- encode / audio / mux
@@ -442,44 +627,130 @@ def _encoder_args(enc, draft, encoder):
     return ["-c:v", "libx264", "-preset", preset, "-crf", str(enc.get("crf", 17)), "-profile:v", "high"]
 
 
-def render_video(tl, base_dir, out, draft=False, encoder="cpu", threads=0):
-    comp = Compositor(tl, base_dir)
-    W, H, fps = comp.W, comp.H, comp.fps
-    vf = grade_filters(tl.get("grade") or {}, base_dir) + [
-        "scale=out_color_matrix=bt709:out_range=tv", "format=yuv420p"]
-    enc = tl.get("encode") or {}
+def _put(q, item, guard, where):
+    """A queue put that keeps checking the guard while the queue stays full."""
+    while True:
+        try:
+            q.put(item, timeout=0.25)
+            return
+        except queue.Full:
+            guard.check(where)
+
+
+def render_video(tl, base_dir, out, draft=False, encoder="cpu", threads=0, guard=None):
+    """Composite every frame and encode it (no audio) to `out`. Raises RenderError and
+    leaves no `out` behind on failure."""
+    guard = guard or _Guard()
+    try:
+        comp = Compositor(tl, base_dir, guard)
+        W, H, fps = comp.W, comp.H, comp.fps
+        vf = grade_filters(tl.get("grade") or {}, base_dir) + [
+            "scale=out_color_matrix=bt709:out_range=tv", "format=yuv420p"]
+    except RenderError:
+        raise
+    except Exception as e:
+        raise RenderError.wrap("compose", "the timeline could not be set up", e) from e
+    if comp.N <= 0:
+        raise RenderError("compose", f"the timeline has no frames (duration {tl.get('duration')})")
+    settings = tl.get("encode") or {}
     cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24",
            "-s", f"{W}x{H}", "-r", str(fps), "-i", "-", "-vf", ",".join(vf),
-           *_encoder_args(enc, draft, encoder), "-g", str(int(round(fps))), "-bf", "2",
+           *_encoder_args(settings, draft, encoder), "-g", str(int(round(fps))), "-bf", "2",
            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
            "-maxrate", "25M", "-bufsize", "50M", "-an", str(out)]
     if threads:                        # an output option: limits the encoder, not the raw input
         cmd[-1:-1] = ["-threads", str(threads)]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    started = time.monotonic()
+    try:
+        enc = ff.Proc(cmd, "video", stdin=subprocess.PIPE, bufsize=0)   # unbuffered: close() never blocks
+    except ff.FFError as e:
+        raise RenderError.wrap("video", "could not start the encoder", e) from e
     out_q = queue.Queue(maxsize=8)
+    werr, written = [], [0]
 
     def writer():
-        while True:
-            buf = out_q.get()
-            if buf is None:
-                return
-            proc.stdin.write(buf)
+        try:
+            while not guard.cancel.is_set():
+                try:
+                    buf = out_q.get(timeout=0.25)
+                except queue.Empty:
+                    continue
+                if buf is None:
+                    return
+                ff.write_all(enc.proc.stdin, buf)
+                written[0] += 1
+                guard.progress = time.monotonic()
+        except Exception as e:         # BrokenPipeError once the encoder is gone: the producer reports it
+            werr.append(e)
 
-    wt = threading.Thread(target=writer, daemon=True)
+    def encoder_alive():
+        if werr or enc.proc.poll() is not None:
+            raise _EncoderGone()
+
+    wt = threading.Thread(target=writer, daemon=True, name="reel-encode")
     wt.start()
+    guard.hooks.append(encoder_alive)
+    started = guard.progress = time.monotonic()
     try:
         for f in range(comp.N):
-            out_q.put(comp.frame(f).tobytes())
+            guard.check()
+            try:
+                buf = comp.frame(f).tobytes()
+            except (RenderError, _EncoderGone):
+                raise
+            except Exception as e:
+                raise RenderError.wrap("compose", f"compositing frame {f} failed", e) from e
+            _put(out_q, buf, guard, f"encoding frame {f}")
+        _put(out_q, None, guard, "finishing the encode")
+        while wt.is_alive():
+            wt.join(0.25)
+            guard.check("encoding the last frames")
+        guard.hooks.remove(encoder_alive)
+        if werr or written[0] != comp.N:
+            raise _EncoderGone()
+        enc.proc.stdin.close()
+        while True:
+            try:
+                rc = enc.proc.wait(0.25)
+                break
+            except subprocess.TimeoutExpired:
+                guard.check("finishing the encode")
+        if rc != 0:
+            raise _EncoderGone()
+    except BaseException as e:
+        rc0 = enc.proc.poll()                      # before we stop it ourselves
+        guard.cancel.set()
+        _quietly(comp.close, "closing the decoders")
+        enc.terminate()
+        wt.join(STOP_GRACE)
+        enc.close(pipes=not wt.is_alive())
+        _unlink(out)
+        if not isinstance(e, Exception):
+            raise
+        raise _video_error(e, guard, enc, rc0, werr, written[0], comp.N) from e
     finally:
-        out_q.put(None)
-        wt.join()
-        comp.close()
-        proc.stdin.close()
-        rc = proc.wait()
-    if rc:
-        raise RuntimeError(f"video encode failed ({rc})")
+        if encoder_alive in guard.hooks:
+            guard.hooks.remove(encoder_alive)
+    _quietly(comp.close, "closing the decoders")
+    enc.close()
     ff.log(f"video: {comp.N} frames in {time.monotonic() - started:.1f}s")
+
+
+def _video_error(e, guard, enc, rc, werr, written, total):
+    """The most telling RenderError for a failed video pass: a recorded failure (deadline,
+    audio) first, then the encoder's own exit, then whatever was raised."""
+    if guard.failure is not None:
+        err = guard.failure
+        if err.record["stage"] == "timeout" and not err.record["cmd"]:
+            _attach(err, enc, rc)
+        return err
+    if isinstance(e, _EncoderGone):
+        if rc is None:
+            msg = f"the encoder stopped taking frames after {written} of {total}"
+        else:
+            msg = f"the encoder exited with {rc} after {written} of {total} frames"
+        return RenderError("video", msg, enc.cmd, rc, enc.tail(), werr[0] if werr else None,
+                           transient=rc is not None and rc < 0)
+    return RenderError.wrap("compose", "rendering the video failed", e)
 
 
 def _duck_expr(spans, depth_db, ramp=0.15):
@@ -500,17 +771,22 @@ def _duck_expr(spans, depth_db, ramp=0.15):
     return f"volume='pow(10,-{depth_db}*({env})/20)':eval=frame"
 
 
-def render_audio(tl, base_dir, out, tmp):
+def render_audio(tl, base_dir, out, tmp, guard=None):
+    """Mix and master the audio to an AAC file at `out`; None if the timeline has none.
+    With a guard every ffmpeg step is bounded and stops when the render is cancelled."""
     a = tl.get("audio") or {}
     clips = [c for c in a.get("clips", []) if c.get("gain_db", 0) > -60]
     dur = tl["duration"]
     if not clips:
         return None
+    cancel = guard.cancel if guard is not None else None
     inputs, graph, buses = [], [], {"voice": [], "music": [], "sfx": []}
     probe_cache, voice_spans = {}, []
     for n, c in enumerate(clips):
         path = _resolve(tl["media"][c["media"]], base_dir)
-        info = probe_cache.setdefault(path, ff.probe(path))
+        if path not in probe_cache:
+            probe_cache[path] = ff.probe(path, timeout=PROBE_TIMEOUT)
+        info = probe_cache[path]
         role = c.get("role", "voice")
         if not info["has_audio"] or role not in buses:
             continue
@@ -557,50 +833,122 @@ def render_audio(tl, base_dir, out, tmp):
                  f"apad=whole_dur={dur:.4f},atrim=0:{dur:.4f}[mix]")
     wav = os.path.join(tmp, "mix.wav")
     ff.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex", ";".join(graph),
-            "-map", "[mix]", "-c:a", "pcm_f32le", wav], name="audio mix")
+            "-map", "[mix]", "-c:a", "pcm_f32le", wav], name="audio mix", timeout=_step_timeout(guard, dur),
+           cancel=cancel)
     target, tp = a.get("loudness", -14.0), a.get("true_peak", -1.0) - 0.5
-    m = ff.loudnorm_measure(wav, target, tp)
+    m = ff.loudnorm_measure(wav, target, tp, timeout=_step_timeout(guard, dur), cancel=cancel)
     ff.run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-i", wav, "-af", ff.loudnorm_filter(m, target, tp),
-            "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-t", f"{dur:.4f}", out], name="audio master")
+            "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-t", f"{dur:.4f}", out], name="audio master",
+           timeout=_step_timeout(guard, dur), cancel=cancel)
     return out
 
 
-def render(timeline, out, draft=False, encoder="cpu", threads=0):
-    """Render a timeline (dict or JSON path) to an MP4."""
+def _audio_job(tl, base_dir, out, tmp, guard, res):
+    """render_audio on its own thread: the result or error goes into `res`; a failure of
+    its own (not one caused by a cancel) also stops the video."""
+    try:
+        res["path"] = render_audio(tl, base_dir, out, tmp, guard)
+    except BaseException as e:
+        err = RenderError.wrap("audio", "the audio mix failed", e)
+        res["error"] = err
+        if not guard.cancel.is_set():
+            guard.note(err)
+
+
+def _load(timeline):
+    """(timeline dict, the directory its relative paths are resolved against)."""
     if isinstance(timeline, (str, Path)):
-        base_dir = str(Path(timeline).resolve().parent)
-        tl = json.loads(Path(timeline).read_text())
-    else:
-        tl, base_dir = timeline, os.getcwd()
+        return json.loads(Path(timeline).read_text()), str(Path(timeline).resolve().parent)
+    return timeline, os.getcwd()
+
+
+def _fsync(path):
+    try:
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
+def _encoder(encoder):
+    """cpu | nvenc as given; "auto" is resolved here (logged) if a caller did not."""
+    if encoder in (None, "cpu", "nvenc"):
+        return encoder or "cpu"
+    if encoder == "auto":
+        from . import readiness
+        try:
+            r = readiness.resolve_encoder("auto")
+        except Exception as e:
+            raise RenderError("video", "could not resolve the encoder", cause=e) from e
+        ff.log(f"encoder auto -> {r['actual']} ({r.get('reason')})")
+        return r["actual"]
+    raise RenderError("video", f"unknown encoder {encoder!r} (cpu | nvenc | auto)")
+
+
+def render(timeline, out, draft=False, encoder="cpu", threads=0, timeout_s=None, stall_s=120):
+    """Render a timeline (dict or JSON path) to an MP4. encoder: "cpu" | "nvenc" (resolve
+    "auto" before fanning out; it is resolved here otherwise). timeout_s bounds the whole
+    render, stall_s the time without an encoded frame (None disables either).
+    Raises RenderError; `out` is replaced only by a complete file."""
+    encoder = _encoder(encoder)
+    try:
+        tl, base_dir = _load(timeline)
+    except (OSError, ValueError) as e:
+        raise RenderError("compose", f"cannot read the timeline {timeline}", cause=e) from e
     started = time.monotonic()
-    out = str(out)
-    Path(out).parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="reel-") as tmp:
-        video = os.path.join(tmp, "video.mp4")
-        sound = os.path.join(tmp, "audio.m4a")
-        with ThreadPoolExecutor(1) as pool:
-            fut = pool.submit(render_audio, tl, base_dir, sound, tmp)
-            render_video(tl, base_dir, video, draft, encoder, threads)
-            has_audio = fut.result() is not None
-        cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-i", video]
-        if has_audio:
-            cmd += ["-i", sound, "-map", "0:v", "-map", "1:a"]
-        ff.run(cmd + ["-c", "copy", "-movflags", "+faststart", "-t", f"{tl['duration']:.4f}", out], name="mux")
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    guard = _Guard(timeout_s, stall_s)
+    # unique, hidden, and with the real extension (ffmpeg picks the container from it)
+    part = out.with_name(f".{out.stem}.{os.getpid()}-{secrets.token_hex(4)}.tmp{out.suffix or '.mp4'}")
+    res = {}
+    try:
+        with tempfile.TemporaryDirectory(prefix="reel-", ignore_cleanup_errors=True) as tmp:
+            video, sound = os.path.join(tmp, "video.mp4"), os.path.join(tmp, "audio.m4a")
+            at = threading.Thread(target=_audio_job, args=(tl, base_dir, sound, tmp, guard, res), daemon=True,
+                                  name="reel-audio")
+            at.start()
+            try:
+                render_video(tl, base_dir, video, draft, encoder, threads, guard)
+                while at.is_alive():
+                    at.join(0.25)
+                    guard.check("mixing the audio", stall=False)
+            except BaseException:
+                guard.cancel.set()                 # stops the audio ffmpeg as well
+                at.join(STOP_GRACE * 3)
+                raise
+            if "error" in res:
+                raise res["error"]
+            cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-i", video]
+            if res.get("path") is not None:
+                cmd += ["-i", sound, "-map", "0:v", "-map", "1:a"]
+            try:
+                ff.run(cmd + ["-c", "copy", "-movflags", "+faststart", "-t", f"{tl['duration']:.4f}", str(part)],
+                       name="mux", timeout=_step_timeout(guard, tl["duration"]), cancel=guard.cancel)
+                _fsync(part)
+                os.replace(part, out)
+            except Exception as e:
+                raise RenderError.wrap("mux", "muxing failed", e) from e
+    finally:
+        _unlink(part)
     ff.log(f"rendered {out} in {time.monotonic() - started:.1f}s")
-    return out
+    return str(out)
 
 
 def still(timeline, t, out):
     """One composed frame at time t as an image (no encode)."""
-    if isinstance(timeline, (str, Path)):
-        base_dir = str(Path(timeline).resolve().parent)
-        tl = json.loads(Path(timeline).read_text())
-    else:
-        tl, base_dir = timeline, os.getcwd()
+    tl, base_dir = _load(timeline)
     comp = Compositor(tl, base_dir)
-    f = int(round(t * comp.fps))
-    comp.from_t = f / comp.fps
-    img = comp.frame(f)
-    comp.close()
-    cv2.imwrite(str(out), img, [cv2.IMWRITE_JPEG_QUALITY, 92] if str(out).lower().endswith((".jpg", ".jpeg")) else [])
+    try:
+        f = int(round(t * comp.fps))
+        comp.from_t = f / comp.fps
+        img = comp.frame(f)
+    finally:
+        comp.close()
+    if not cv2.imwrite(str(out), img, [cv2.IMWRITE_JPEG_QUALITY, 92] if str(out).lower().endswith((".jpg", ".jpeg"))
+                       else []):
+        raise RenderError("compose", f"could not write {out}")
     return out

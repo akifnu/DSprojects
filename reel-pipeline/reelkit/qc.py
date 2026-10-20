@@ -2,11 +2,13 @@
 
 check(reel.mp4, timeline, style) runs every check below and returns
 {"verdict": "pass|warn|fail", "issues": [...], "metrics": {...}}; an issue is
-{"check", "severity": "warn|fail", "msg", "t": [s, e] (optional)}.
+{"check", "severity": "warn|fail", "msg", "t": [s, e] (optional)}. When ffmpeg
+cannot read the reel at all (decoder exit, truncated frame) it raises ff.FFError.
 
   format      codec / size / fps / pixel format, duration ±1 frame of the timeline,
-              audio and video streams the same length
-  loudness    integrated loudness ±0.5 LU of the target, true peak ≤ −1 dBTP
+              every frame decodes, audio and video streams the same length
+  loudness    integrated loudness ±0.5 LU of the target (unmeasurable fails), true
+              peak ≤ −1 dBTP
   picture     black frames and frozen runs inside moving footage (outside what the
               timeline intends), uncovered canvas edges (pixels and timeline geometry),
               clips that run past the end of their source
@@ -25,7 +27,6 @@ import json
 import math
 import os
 import re
-import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -33,7 +34,7 @@ import cv2
 import numpy as np
 
 from . import ff
-from .paths import FFPROBE, MODELS
+from .paths import MODELS
 
 # UI-free zones per platform at 1080×1920 (px of margin), scaled to the canvas.
 SAFE = {"reels": {"top": 220, "bottom": 420, "left": 60, "right": 150},
@@ -60,9 +61,7 @@ def _issue(issues, check, severity, msg, t=None):
 
 
 def _streams(path):
-    out = subprocess.run([FFPROBE, "-v", "error", "-print_format", "json", "-show_streams", "-show_format", str(path)],
-                         capture_output=True, text=True, check=True).stdout
-    return json.loads(out)
+    return ff.probe_json(path)
 
 
 def _norm(w):
@@ -355,7 +354,9 @@ def check(reel_mp4, timeline=None, style=None, transcript_words=None, asr=True, 
         tp_max = ((tl or {}).get("audio") or {}).get("true_peak", -1.0)
         loud = ff.loudness(reel_mp4)
         metrics["loudness"] = loud
-        if "I" in loud and abs(loud["I"] - target) > 0.5:
+        if "I" not in loud:             # an unmeasured reel must not pass by default
+            _issue(issues, "loudness", "fail", "integrated loudness could not be measured")
+        elif abs(loud["I"] - target) > 0.5:
             _issue(issues, "loudness", "fail", f"integrated {loud['I']:.1f} LUFS, target {target} ±0.5")
         if "TP" in loud and loud["TP"] > tp_max:
             sev = "fail" if loud["TP"] > tp_max + 0.5 else "warn"
@@ -370,15 +371,20 @@ def check(reel_mp4, timeline=None, style=None, transcript_words=None, asr=True, 
         want.update((k - 1, k))
     for _, _, mid, _ in caps:
         want.add(int(mid * fps))
-    scan = Scan(reel_mp4, info, want)
+    scan = Scan(reel_mp4, info, want)       # a decoder failure raises (ff.FFError)
     n = scan.n
+    expected = int(round(tl["duration"] * tl["fps"])) if tl else None
+    if n == 0:
+        _issue(issues, "format", "fail", "no video frame could be decoded")
+    elif expected and n < expected - 1:
+        _issue(issues, "format", "fail", f"only {n} of the timeline's {expected} frames decode")
     intended = _intended_dark(tl, fps, n)
     black = (scan.mean < 14) & (scan.std < 5)
     for s, e in _runs(black & ~intended, 2):
         _issue(issues, "black", "fail", f"{e - s} black frames", (s / fps, e / fps))
     metrics["black_frames"] = int((black & ~intended).sum())
     still = scan.diff < 0.12
-    still[0] = False
+    still[:1] = False
     for s, e in _runs(still, max(3, int(0.4 * fps))):
         ctx = np.concatenate([scan.diff[max(1, s - int(fps)):s], scan.diff[e:min(n, e + int(fps))]])
         if len(ctx) and np.median(ctx) > 0.8:
@@ -523,7 +529,9 @@ def _geometry(tl, base_dir, issues):
         path = media.get(c.get("media"))
         if not path or not os.path.exists(path) or path.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
             continue
-        info = probes.setdefault(path, ff.probe(path))
+        if path not in probes:
+            probes[path] = ff.probe(path)
+        info = probes[path]
         if not info.get("has_video"):
             continue
         speed = c.get("speed", 1.0)
@@ -531,8 +539,11 @@ def _geometry(tl, base_dir, issues):
         tout = ((nxt.get("transition_in") or {}).get("dur", 0) / 2) if nxt and isinstance(nxt.get("transition_in"), dict) else 0
         need = c.get("in", 0) + (c["dur"] + tout) * speed
         if need > info["duration"] + 1.5 / fps:
-            _issue(issues, "source", "fail", f"clip {i} needs {need:.2f}s of a {info['duration']:.2f}s source "
-                                             f"(last frame would be held)", (c["start"], c["start"] + c["dur"]))
+            held = bool(c.get("hold_last"))         # the timeline asked for the hold explicitly
+            _issue(issues, "source", "warn" if held else "fail",
+                   f"clip {i} needs {need:.2f}s of a {info['duration']:.2f}s source "
+                   f"({'its last frame is held' if held else 'only hold_last may hold its last frame'})",
+                   (c["start"], c["start"] + c["dur"]))
         if c.get("fit", "cover") == "contain":
             continue
         sw, sh = info["width"], info["height"]
