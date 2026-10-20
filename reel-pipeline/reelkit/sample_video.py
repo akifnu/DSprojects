@@ -411,9 +411,9 @@ def _jump_cuts(sig, busy, look=15):
         nb = max(sp[k - 1], sp[k + 1])
         if med < 0.002 or sp[k] < 4 * med or nb > 0.5 * sp[k]:
             continue
-        moving = sig["energy"][max(1, k - 6):k].mean(axis=0) > 1.0
+        moving = sig["energy"][max(1, k - 6):k].mean(axis=0) > 0.5
         ch = cm[k]
-        if ch.sum() and (ch & moving).sum() / ch.sum() >= 0.4:
+        if ch.sum() and (ch & moving).sum() / ch.sum() >= 0.15:
             out.append(k)
     return out
 
@@ -631,8 +631,9 @@ def _look(path, info, text_boxes):
         ch, cw = h // 8, w // 8
         corners.append(np.mean([g[:ch, :cw].mean(), g[:ch, -cw:].mean(), g[-ch:, :cw].mean(), g[-ch:, -cw:].mean()]))
         centres.append(g[h // 2 - ch // 2:h // 2 + ch // 2, w // 2 - cw // 2:w // 2 + cw // 2].mean())
-        res = g - cv2.GaussianBlur(g, (0, 0), 1.2)
-        grad = np.hypot(cv2.Sobel(g, cv2.CV_32F, 1, 0), cv2.Sobel(g, cv2.CV_32F, 0, 1))
+        sm = cv2.GaussianBlur(g, (0, 0), 1.2)
+        res = g - sm
+        grad = np.hypot(cv2.Sobel(sm, cv2.CV_32F, 1, 0), cv2.Sobel(sm, cv2.CV_32F, 0, 1))
         # noise = residual std of the flattest 8×8 blocks (texture and edges excluded)
         bh, bw = h // 8, w // 8
         rb = res[:bh * 8, :bw * 8].reshape(bh, 8, bw, 8).std(axis=(1, 3))

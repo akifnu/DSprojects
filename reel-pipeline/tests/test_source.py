@@ -57,7 +57,8 @@ class Source(unittest.TestCase):
             f = next(ff.frames(m["path"], 64, 36, start=off, duration=0.2))
             self.assertEqual(source_index(f, self.means, round(t * 60)), round(t * 60), f"t={t}")
         with self.assertRaises(KeyError):
-            source.locate(copies, 5.0)
+            source.locate([{"s": 1.0, "e": 3.6}, {"s": 7.0, "e": 9.5}], 5.0)
+        self.assertEqual(source.locate([{"s": 1.0, "e": 3.6}], 2.5)[1], 1.5)
 
     def test_cache_reuse_and_whole_file(self):
         a = source.prepare(self.asset, [(4.0, 4.5)], fps=30, short_side=360)
