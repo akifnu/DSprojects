@@ -70,6 +70,15 @@ class Runtime(unittest.TestCase):
             fsutil.atomic_write_json(need["plan"], plan)
             O.complete(jid, "plan", need_id=need["need_id"], revision=need["revision"])
 
+            # The storyboard may use the compositor, but never full media work.
+            with patch.object(source, "prepare", side_effect=AssertionError("prepared before approval")), \
+                    patch("reelkit.render.render", side_effect=AssertionError("rendered before approval")):
+                job = O.advance(jid)
+                self.assertEqual(job["needs"]["step"], "approve_storyboard", job.get("error"))
+                self.assertTrue(Path(job["needs"]["sheet"]).is_file())
+                current = job["needs"]
+                self.assertEqual(O.advance(jid)["needs"]["need_id"], current["need_id"])
+            O.decide_storyboard(jid, "approve", current["need_id"], current["revision"], current["storyboard_sha256"])
             job = O.advance(jid)
             self.assertEqual(job["needs"]["step"], "review", job.get("error"))
             need = job["needs"]

@@ -27,6 +27,9 @@ and `batch`), logs and progress to stderr.
   reel job cancel ID | reel job retry ID
   reel job done ID STEP --need NEED_ID [--revision N] [--note T | --note-file F] [--result-file F]
                                              an agent answered verify_style | plan | review
+  reel job approve ID --need NEED_ID --revision N --storyboard SHA256
+  reel job revise ID --need NEED_ID --revision N --storyboard SHA256 --notes-file F
+                                             records the user's decision on the current storyboard
   reel job status [ID|latest] | reel job list
 
 ID may be "latest" (the most recently created job), resolved once here. Job errors print
@@ -296,6 +299,11 @@ def _job_status(orch, a):
     _out(orch.status(orch.resolve(a.id)))
 
 
+def _job_storyboard_decision(orch, a):
+    notes = _read_text(orch, a.notes_file, "feedback") if a.notes_file else a.notes
+    _out(orch.decide_storyboard(orch.resolve(a.id), a.action, a.need, a.revision, a.storyboard, notes or ""))
+
+
 def _job_list(orch, a):
     _out(orch.list_jobs())
 
@@ -311,6 +319,7 @@ def _job_work(orch, a):
 _JOB = {"new": _job_new, "add": _job_add, "start": _job_start, "wait": _job_wait, "advance": _job_advance,
         "cancel": _job_cancel, "retry": _job_retry, "done": _job_done, "status": _job_status, "list": _job_list,
         "_work": _job_work}
+_JOB.update(approve=_job_storyboard_decision, revise=_job_storyboard_decision)
 
 
 def cmd_job(a):
@@ -382,6 +391,15 @@ def _job_parser(sub):
     q.add_argument("--result-file", help="the answer (default: the need's own file)")
     q.add_argument("--fixes", help='legacy review: JSON [{"reel": "r03", "what": "...", "how": "..."}]')
     q.add_argument("--ok", help="legacy review: comma-separated accepted reel ids")
+    for decision in ("approve", "revise"):
+        q = js.add_parser(decision, help=f"user {decision} of the current storyboard")
+        q.add_argument("id")
+        q.add_argument("--need", required=True)
+        q.add_argument("--revision", type=int, required=True)
+        q.add_argument("--storyboard", required=True, help="needs.storyboard_sha256")
+        g = q.add_mutually_exclusive_group()
+        g.add_argument("--notes")
+        g.add_argument("--notes-file")
     js.add_parser("list", help="all jobs")
     q = js.add_parser("_work")           # the detached worker (spawned by start; not listed)
     q.add_argument("id")

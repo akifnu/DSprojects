@@ -64,7 +64,7 @@ in `.tools/` (`ffmpeg -> ffmpeg-n9.0-<sha>`, `CHECKSUMS`, `ffmpeg.version`, `pro
              "lang": "en",                 // "en", "auto" or a Whisper language code
              "notes": "Keep technical terms and avoid a CTA"},   // the user's instructions, for the planner
  "execution": {"encoder": "auto",          // auto | cpu | nvenc
-               "require_gpu": false,       // true: no NVENC → the job fails before expensive work
+               "require_gpu": false,       // true: no NVENC → fails before full preparation/rendering
                "allow_cpu_fallback": true, // auto / nvenc may fall back to x264 (recorded with the reason)
                "asr_provider": "cpu"}}     // cpu | cuda (needs the GPU profile)
 ```
@@ -82,7 +82,8 @@ Ids: `j<YYYYmmdd-HHMMSS>-<6 hex>` (created exclusively) or an explicit name matc
 {"id": "j20261020-103000-4f2a9c", "schema": 2,
  "revision": 17,                           // +1 per saved transaction (under the job's state lock)
  "status": "needs:review", "terminal": false,
- "policy": {"version": 2, …},              // snapshot taken at creation; the only policy this job uses
+ "policy": {"version": 3,
+            "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120}, …},
  "request": {…}, "request_hash": "<sha-256>", "request_warnings": [],
  "files": [{"path", "role", "role_source", "suggested_role"?, "asset", "sha256", "error"?, "added_rev"}],
  "inputs": {"samples": [], "sources": [], "music": [], "sfx": [], "images": []},   // asset ids by role
@@ -94,6 +95,10 @@ Ids: `j<YYYYmmdd-HHMMSS>-<6 hex>` (created exclusively) or an explicit name matc
  "plan": {"generation": 3, "path": ".../plans/plan.g3.json", "sha256", "reels": ["r01", …],
           "entry_hashes": {"r01": "<sha-256>"}, "warnings": []},
  "plan_generation": 3,
+ "storyboard": {"key", "sha256", "manifest", "page", "sheet", "files": {"<path>": "<sha256>"},
+                "frames", "cache_hits", "estimated_render_frames", "elapsed_s", "limitations"},
+ "storyboard_approval": {"by": "user", "sha256", "plan_generation", "need_id", "at", "notes"},
+ "storyboard_feedback": [{"plan_generation", "at", "notes"}],
  "render": {"seq": 4, "manifest": ".../manifests/render.4.json", "generation": 5, "counts": {…}, "encoder": {…}},
  "encoder": {"requested": "auto", "actual": "nvenc", "reason": "…", "gpu": "NVIDIA L4 (driver …)"},
  "review": {"ledger": {"r01": {"decision": "accept" | "fix_required" | "unreviewed" | "repairing",
@@ -113,13 +118,14 @@ Ids: `j<YYYYmmdd-HHMMSS>-<6 hex>` (created exclusively) or an explicit name matc
 
 Status while open: `intake` (new) | `waiting:sample` / `waiting:source` (inputs missing; `job add`
 resumes, unaffected work is kept) | `waiting:worker` (`job start` continues) | `needs:<step>` (an
-agent must answer) | `running:<step>`. Terminal: `succeeded` (every planned reel delivered and
+agent or user must answer) | `running:<step>`. Terminal: `succeeded` (every planned reel delivered and
 reviewed where required, no open blocking finding, no shortfall) | `partial` (allow_partial and ≥ 1
 reel accepted; the rest listed) | `needs_attention` (a blocking finding or missing judgment
 outlived its budget, or nothing was accepted) | `failed` (infrastructure / validation; typed record
 in `error`) | `cancelled`.
 
-Needs, by step (all carry `step, need_id, revision, agent, model, rejections, errors`):
+Needs, by step (all carry `step, need_id, revision, agent, errors`; agent needs also
+carry `model, rejections`):
 - `verify_style`: `{style: jobs/<id>/style.work.json (the job-local copy to edit), review: review.jpg,
   sample, sample_id, extra_samples, review_out, fixes}` — answered by setting `review.verified`;
   validated by contracts.validate_style, then published as the immutable `styles/style.v<k>.json`.
@@ -128,6 +134,17 @@ Needs, by step (all carry `step, need_id, revision, agent, model, rejections, er
   plan_generation, previous_plan, errors}` — validated by contracts.validate_plan against the
   transcripts and the request; in a repair round every entry outside `only` must keep its
   contracts.plan_entry_hash.
+- `approve_storyboard`: `{agent: "user", storyboard_sha256, page, sheet, manifest,
+  frames, estimated_render_frames, limitations, plan_generation, errors}`. The workflow
+  returns immediately with `requires_user_approval: true`. The main session presents the
+  board and records the user's specific decision with `job approve` or `job revise`;
+  both require `--need`, `--revision` and `--storyboard SHA256`. Revision additionally
+  needs nonempty feedback (`--notes-file` or `--notes`). `job done` cannot answer it.
+  Approval binds the current plan generation, complete input fingerprint and hashes
+  of every preview artifact. A changed/missing artifact or input rejects approval;
+  `prepare` and `render` recheck it before starting. There is no automatic approval
+  timeout. A new accepted plan always requires a new decision; feedback is included
+  as `storyboard_feedback` in the next plan need and does not spend QC repair budget.
 - `review`: `{plan_generation, manifest, render_generation, assigned: [{id, render_sha256,
   qc_verdict, status, issues, error, file, sheet, qc, previous_findings}], rounds_left_by_reel,
   result_file: jobs/<id>/inbox/<need_id>.json, style, plan, schema_version}`.
@@ -139,6 +156,18 @@ returned), `delivery.json`, `attempts/<attempt>.json` `{id, pid, pgid, started, 
 heartbeat, stage, ended, exit, error_record}` with `attempts/<attempt>.log`, `events.jsonl` (one
 JSON object per line: `at, ts, job, stage, attempt, revision, event, …`), `cancel` (flag file),
 `state.lock`. Batches of a job live in `data/batches/<job id>/`.
+
+`storyboards/board-<key>-<nonce>/` holds independently copied JPEG panels,
+`contact-sheet.jpg`, `index.html` and `manifest.json`; the manifest lists reels,
+planned speech, sampling times, durations, shot counts, limitations and frame counts.
+`storyboards/cache/<reel-key>/` holds compiled preview timelines and hash-checked
+frames. Per-reel keys include source identities, transcript contents, style, fonts,
+output configuration and preview/compiler/renderer code. Jobs from older policy
+versions receive this mandatory gate on migration; no approval is synthesized.
+The preview compiler uses original media and cached transcripts with no audio,
+editing copies, full tracking or full-source colour measurement. Defaults are
+three sparse frames per reel, at most 360×640, 240 frames/job and 120 seconds.
+Budget violations fail the storyboard stage before full preparation/rendering.
 
 `deliver` = `{files: [accepted deliverable paths from manifest.deliverables], review: [failing
 reels' files], contact_sheet, manifest, generation, plan_generation, counts: {requested, planned,

@@ -52,9 +52,9 @@ every completion rule; agents (`.claude/agents/`) only supply judgment:
 
 ```
 reel job new ─► [intake · analyse sample]─► sample-analyst verifies style ─► [transcribe]
-  ─► reel-planner writes plan ─► [editing copies · render · QC] ─► qc-reviewers ─┬─► deliver
-                    ▲                                                           │
-                    └──────── fixes (budget per reel and per job) ◄─────────────┘
+  ─► reel-planner writes plan ─► [storyboard] ─► USER APPROVES ─► [editing copies · render · QC]
+                    ▲                                                      │
+                    └──────── fixes ◄──────── qc-reviewers ◄────────────────┘ ─► deliver
 ```
 
 ## Operations
@@ -69,6 +69,8 @@ reel job wait ID [--timeout S]        # 0 settled (agent / input needed, or term
                                       # 124 still running
 reel job status ID|latest             # JSON: status, needs (need_id, revision), counts, open findings
 reel job done ID STEP --need NEED_ID --revision N [--note-file F] [--result-file F]
+reel job approve ID --need NEED_ID --revision N --storyboard SHA256
+reel job revise ID --need NEED_ID --revision N --storyboard SHA256 --notes-file feedback.txt
 reel job cancel ID | reel job retry ID | reel job list
 ```
 
@@ -85,6 +87,13 @@ reel job cancel ID | reel job retry ID | reel job list
   out-of-order or invalid answers are rejected with the reasons (exit 2) and the need stays
   open. Review results go into `inbox/<need_id>.json` (a file, never JSON in a shell
   argument); every finding is recorded whatever the repair budget.
+- **Storyboard approval.** Every accepted plan first produces a local HTML page and
+  contact sheet, then stops at `needs:approve_storyboard`. Show the user `needs.page`
+  and `needs.sheet`. Only after they approve that board, run `job approve` with the
+  need's ID, revision and `storyboard_sha256`, then start the job again. `job revise` records
+  their feedback and reopens planning without spending the automatic QC repair
+  budget. Agents cannot complete this need with `job done`. Approval has no timeout;
+  a changed plan, input, transcript, font or preview invalidates it.
 - **Terminal states.** `succeeded` (every planned reel delivered, reviewed where required,
   no open blocking finding, no shortfall), `partial` (some reels accepted, the rest listed
   with reasons), `needs_attention` (a blocking finding or missing judgment outlived its
@@ -107,13 +116,30 @@ reel-pipeline/reel job new … --encoder nvenc --require-gpu [--asr-provider cud
 `reel check` counts NVENC only after a real 30-frame h264_nvenc encode with the renderer's
 settings (an encoder listing proves nothing about the driver or device) and reports the GPU
 from nvidia-smi; `cuda` ASR needs a CUDA build of sherpa-onnx and a visible GPU. With
-`--require-gpu` a job without a usable NVENC fails before any expensive work; `auto` falls
+`--require-gpu` a job without a usable NVENC fails before full preparation/rendering; `auto` falls
 back to the CPU encoder only while CPU fallback is allowed, and the manifest and job record
 the requested and actual encoder with the reason. The exact CUDA wheels depend on the host's
 driver, CUDA and cuDNN — validate them there (requirements-gpu.txt says how to pin them). In
 containers, pass `--gpus all`; the image sets NVIDIA_DRIVER_CAPABILITIES=compute,utility,video.
 
 ## The production line
+
+### Review frames before rendering
+
+The job workflow defaults to three stills per reel (hook, middle, payoff), at up to
+360 pixels wide and 640 high. It reuses the production caption/layout compositor,
+original footage and current cached transcripts, with face detection only on the
+selected frames. Per-reel caches reuse unchanged previews after feedback. Defaults
+cap a board at 240 stills and 120 seconds; exceeding a budget stops the job before
+full rendering. These limits live in the job's `policy.storyboard` snapshot.
+
+Sample analysis and transcription still run before planning. Storyboarding skips
+editing-copy creation, audio preparation/mixing, full face tracking, full-source
+colour measurement and video encoding. Static previews show layout and planned
+speech; audio, animation, smooth tracking and the final colour match need the
+approved render and subsequent QC. A revised plan requires a new approval, including
+plans produced by the QC repair loop. Direct `reel batch` / `reel render` commands
+remain manual tools; use `reel job` for the approval workflow.
 
 ### Import footage from a URL
 
@@ -130,10 +156,11 @@ provenance record. Use its local `file` in `reel job new --source FILE`, or use 
 asset `id` with `reel source ID`. Playlists are rejected; failed downloads clean
 their staging directory. Local-file jobs do not require yt-dlp.
 
-HyperFrames was considered for richer HTML motion graphics. The core compositor
-remains in use: the available fixtures do not establish that a browser renderer
-improves these talking-head edits. A renderer migration needs matched reference
-renders, timing/audio checks and a measured visual comparison first.
+HyperFrames was considered for richer HTML motion graphics. Sparse stills from
+the existing compositor keep previews close to the final captions and layout
+without a browser-rendering dependency. The available fixtures do not establish
+that HyperFrames improves these talking-head edits. A renderer migration needs
+matched reference renders, timing/audio checks and a measured visual comparison.
 
 ### Effect timing and caption verification
 
@@ -162,7 +189,7 @@ failure continues to block delivery regardless of an agent's review decision.
 
 Modules (`reelkit/`): `store` · `asr` · `sample` (with `sample_text`, `sample_video`,
 `sample_audio`, `grade`) · `source` · `reframe` · `plan` · `compile` · `render` ·
-`captions` · `sfx` · `qc` · `batch` · `loop` · `orchestrator` · `contracts` (the executable
+`captions` · `sfx` · `qc` · `batch` · `loop` · `storyboard` · `orchestrator` · `contracts` (the executable
 schemas) · `readiness` · `fsutil` · `ff` · `paths`. The data shapes passed between them are
 in [SPEC.md](SPEC.md).
 
@@ -193,7 +220,10 @@ Its required core suite covers editing/rendering, a complete job with stubbed
 analysis and agent answers but real ingest/render/QC/delivery, stale and repeated
 answers, review/render fencing, damaged state recovery, cancellation/restart,
 bounded retries, worker death, immutable manifest generations, cache tampering,
-encoder fallback policy, process timeouts and atomic output failures. URL-import
+encoder fallback policy, process timeouts, atomic output failures, storyboard
+budget/cache behavior and explicit approval/stale approval rejection. A Node
+harness verifies the workflow returns the human need without delegating it.
+URL-import
 tests mock the downloader; they do not depend on a live media website.
 
 ```
@@ -206,8 +236,8 @@ REELKIT_OFFLINE=1 python3 tests/run_suite.py --suite analysis -v
 
 Bootstrap installs the smaller test profile (ffmpeg 9, YuNet, a moving-face image,
 OCR package models and the font bank). Speech fixtures carry current ASR
-fingerprints; production speech-model inference and the Claude JavaScript
-controller are not covered by this profile. The private R1 real-speech test skips
+fingerprints; production speech-model inference and live Claude workflow
+execution are not covered by this profile. The private R1 real-speech test skips
 when its source/model are absent.
 
 **Known baseline failures:** the existing `test_sample_text.py` round-trip suite

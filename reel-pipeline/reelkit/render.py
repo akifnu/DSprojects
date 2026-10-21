@@ -938,13 +938,15 @@ def render(timeline, out, draft=False, encoder="cpu", threads=0, timeout_s=None,
     return str(out)
 
 
-def still(timeline, t, out):
+def still(timeline, t, out, timeout_s=None):
     """One composed frame at time t as an image (no encode)."""
     tl, base_dir = _load(timeline)
-    comp = Compositor(tl, base_dir)
+    guard = _Guard(timeout_s, min(10, timeout_s) if timeout_s else 10)
+    comp = Compositor(tl, base_dir, guard)
     try:
         f = int(round(t * comp.fps))
         comp.from_t = f / comp.fps
+        guard.check(stall=False)
         img = comp.frame(f)
     finally:
         comp.close()

@@ -11,7 +11,7 @@ the files it found and the open jobs).
 ## The layers
 - **Orchestrator (code)** `reelkit/orchestrator.py`, CLI `reel job …`: owns the job — state,
   revisions, validation of every agent answer, retry budgets and the final verdict. A job runs
-  `intake → analyze → VERIFY_STYLE → transcribe → PLAN → prepare → render → REVIEW → deliver`; the
+  `intake → analyze → VERIFY_STYLE → transcribe → PLAN → storyboard → APPROVE_STORYBOARD → prepare → render → REVIEW → deliver`; the
   mechanical steps run in a detached worker and it stops only at the CAPS steps, publishing a
   `needs` record (step, `need_id`, `revision`, agent, details) that the answer must quote.
   Status while open: `intake`, `waiting:sample` / `waiting:source` (inputs missing),
@@ -26,7 +26,7 @@ the files it found and the open jobs).
   | `cancelled` | cancelled, worker stopped |
 
   Policy is snapshotted per job: per-reel repair budget, review retries for unreviewed reels,
-  spot checks of passing reels, encoder, ASR provider.
+  spot checks of passing reels, encoder, ASR provider and storyboard budgets.
 - **Worker**: `reel job start <id>` spawns it and returns once it has acknowledged ownership;
   `reel job wait <id> --timeout S` blocks and exits 0 (settled: an agent or input is needed, or the
   job ended), 2 (worker failed or died — the status carries the error and the attempt log), 124
@@ -34,8 +34,8 @@ the files it found and the open jobs).
 - **Workflow** `.claude/workflows/reel-job.js` (saved workflow `reel-job`, args `{job}`): the
   `reel-runner` starts and waits; each open need goes to its agent; review is fanned out to
   parallel reviewers, a failed reviewer is retried once, and every finding is recorded whatever the
-  repair budget (Python decides whether another repair round runs). It stops on a terminal state or
-  a missing input, and returns `{status: "blocked", …}` when its step budget runs out — rerun it with
+  repair budget (Python decides whether another repair round runs). It stops for user storyboard
+  approval, a terminal state or a missing input, and returns `{status: "blocked", …}` when its step budget runs out — rerun it with
   the same job id to resume.
 - **Agents** `.claude/agents/`: `reel-runner` (runs start/wait/done, writes the review result
   file), `sample-analyst` (verifies/corrects the job's working copy of the measured style),
@@ -69,6 +69,15 @@ the files it found and the open jobs).
    approximations (fonts not exactly identified, music the user must add in-app, …). Sending the
    files is an optional adapter: use SendUserFile when that tool is available, otherwise give the
    paths.
+   - `needs:approve_storyboard` / `requires_user_approval`: present `needs.page` and
+     `needs.sheet`, planned speech and `needs.limitations`, then wait for the user's
+     decision on this board. Only the main session records a specific user approval:
+     `reel job approve <id> --need <need_id> --revision <n> --storyboard <sha256>`.
+     For requested changes, write feedback to a file and run
+     `reel job revise <id> --need <need_id> --revision <n> --storyboard <sha256> --notes-file F`.
+     Rerun `reel-job` afterwards. Never delegate this decision to an agent, use `job done`,
+     infer approval from silence, or treat implementation/push preapproval as media approval.
+     A changed plan requires another review, including after automatic QC repairs.
    - `waiting:sample` / `waiting:source`: tell the user what to upload; `reel job add` + rerun.
    - Workflow returned `blocked`: rerun `reel-job` with the same id (it resumes from the job's state).
    - `failed`: report `status.error` (stage, cause, log tail); `reel job retry <id>` reopens the job
@@ -77,17 +86,22 @@ the files it found and the open jobs).
 ## Encoder and devices
 `--encoder auto` (default) uses NVENC only after a real smoke encode succeeds on this host and
 otherwise falls back to x264, recording why; `cpu` never probes; `nvenc` (with `--require-gpu`
-and/or `--no-cpu-fallback`) fails the job before expensive work when NVENC is unavailable. Frame
+and/or `--no-cpu-fallback`) fails before full preparation/rendering when NVENC is unavailable. Frame
 composition stays on the CPU either way. `--asr-provider cuda` only with a CUDA build of sherpa-onnx.
 The same `--encoder` option exists on `reel render` and `reel batch`.
 
 ## Manual control
-`reel job status|start|wait|advance|cancel|retry|done|add|list`, and underneath: `reel sample`,
+`reel job status|start|wait|advance|cancel|retry|done|approve|revise|add|list`, and underneath: `reel sample`,
 `reel source`, `reel batch`, `reel render`, `reel qc`, `reel loop`. Shapes in reel-pipeline/SPEC.md.
 `reel job advance` runs the worker in the foreground (same lock); never background it with
 `nohup`/`&` — use `start`/`wait`.
 
 ## Rules
+- Use the job workflow for production. Its default storyboard samples three small stills
+  per reel, caches unchanged reels and caps frame count/time. Sample analysis and ASR
+  still run once before planning. Full encoding, audio mixing, editing copies and full
+  tracking wait for user approval. The static board cannot verify motion/audio/final grade.
+  Do not bypass the gate with direct `reel batch` or `reel render` calls.
 - Production agents only write job artifacts (plan.json, the job's style.work.json, result and note
   files under the job). They never modify the deployed software: no code edits, commits or pushes
   during a production run. Code changes go through reviewed pull requests, not this skill.

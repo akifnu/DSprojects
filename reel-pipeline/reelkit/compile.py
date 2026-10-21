@@ -554,7 +554,7 @@ class Context:
 # ------------------------------------------------------------------ compile
 
 def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, envelopes=None, reframing=True,
-                 looks=None, provider=None):
+                 looks=None, provider=None, preview=False):
     """Write out_dir/timeline.json and out_dir/deps.json for one reel; returns the timeline's
     path. transcripts / copies / envelopes / looks ({source key: look}, filled in when given)
     are shared inputs (see Context); what is not given is made here."""
@@ -579,6 +579,8 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     copies = dict(copies or {})              # never add one reel's own copies to a shared dict
     for key in {r["src"] for r in runs}:
         if key not in copies:
+            if preview:
+                raise ValueError(f"preview needs an original-source mapping for {key}; editing copies are disabled")
             copies[key] = source.prepare(assets[key], [(r["s"], r["e"]) for r in runs if r["src"] == key], fps=fps)
 
     # ---- timeline positions of runs and words
@@ -695,13 +697,13 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
 
     # ---- audio
     clips = []
-    for r, t0 in zip(runs, starts):
+    for r, t0 in ([] if preview else zip(runs, starts)):
         akey = f"a_{r['src']}"
         if akey not in timeline_media:
             timeline_media[akey] = source.audio(assets[r["src"]])
         clips.append({"media": akey, "start": round(t0, 4), "in": r["s"], "dur": round(r["e"] - r["s"], 4),
                       "role": "voice", "mono": True})
-    music = plan.get("music")
+    music = None if preview else plan.get("music")
     if music:
         mpath = str(store.get(music["asset"]).path)
         timeline_media["music"] = mpath
@@ -713,8 +715,8 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                           "gain_db": music.get("gain_db", -16), "fade_in": 0.02 if t0 else 0, "fade_out": 0.3})
             t0 += d
     sfx_cfg = _g(style, "audio", "sfx") or {}
-    prof = _sfx_profile(style)
-    voice_db = _voice_db(runs, envelopes)
+    prof = {} if preview else _sfx_profile(style)
+    voice_db = None if preview else _voice_db(runs, envelopes)
     moments = []
     if "cut" in prof:
         chosen = _select_moments(events, prof["cut"]["rate"], scores, range(1, len(video)))
@@ -746,7 +748,7 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     # ---- grade
     g = style.get("grade") or {}
     tl_grade = {key: g[key] for key in ("sharpen", "grain", "vignette") if g.get(key)}
-    if g.get("look"):
+    if g.get("look") and not preview:
         main = max({r["src"] for r in runs}, key=lambda s_: sum(r["e"] - r["s"] for r in runs if r["src"] == s_))
         if looks is not None and main in looks:
             src_look = looks[main]

@@ -1,18 +1,17 @@
 """Top orchestration layer: one job = uploads in → finished reels out.
 
 A job is a state machine on disk (data/jobs/<id>/job.json). A worker runs every mechanical
-step itself (ingest, sample analysis, transcription, editing copies, batch render + QC,
-delivery) and stops only where judgment is needed, publishing a `needs` record: which agent
-must act, what it must produce, and the `need_id` its answer has to quote.
+step itself (ingest, sample analysis, transcription, storyboard, editing copies, batch
+render + QC, delivery) and stops where an agent's judgment or a user's storyboard
+approval is needed, publishing a `needs` record and the `need_id` the answer must quote.
 
-    intake ─► analyze ─► VERIFY_STYLE ─► transcribe ─► PLAN ─► prepare ─► render ─► REVIEW ─┬─► deliver
-                         (sample-analyst)              (planner)                  (qc-reviewer) │
-                               ▲                          ▲                                    │
-                               └── style-level fixes ─────┴──── reel fixes (budget per reel) ◄─┘
+    intake → analyze → VERIFY_STYLE → transcribe → PLAN → storyboard → APPROVE_STORYBOARD
+                       (analyst)                 (planner)            (user)
+      → prepare → render → REVIEW → deliver (or fixes → new plan → new storyboard approval)
 
 Status while open: "intake" (new) | "waiting:sample" | "waiting:source" (inputs missing; `add`
 resumes, keeping unaffected work) | "waiting:worker" (ready: `start` continues) | "needs:<step>"
-(an agent must answer) | "running:<step>". Terminal:
+(an agent or user must answer) | "running:<step>". Terminal:
   succeeded        every planned reel delivered, reviewed where required, no open blocking
                    finding, no shortfall against the requested count
   partial          policy allow_partial and ≥ 1 reel accepted; blocked reels, unresolved
@@ -33,6 +32,8 @@ here, not by prompts:
                 style.verified.json for later jobs of the same measurement
   plan          contracts.validate_plan against the transcripts and the request; in a repair
                 round, entries outside `only` must keep their contracts.plan_entry_hash
+  approve_storyboard  only an explicit user decision, bound to the current plan and preview;
+                      no generic agent completion and no automatic approval timeout
   review        contracts.normalize_review against the assigned reels and render hashes;
                 omitted / null reels stay unreviewed and are re-requested (review_retries),
                 every finding is kept whatever the budget, repairs are counted per reel
@@ -72,7 +73,8 @@ from . import contracts, ff, fsutil, store
 from .paths import DATA, ROOT
 
 POLICY = {
-    "version": 2,
+    "version": 3,
+    "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120},
     "sample_max_seconds": 120,      # bare files: vertical/square video up to this long is guessed to be a sample
     "spot_check": "sqrt",           # passed reels reviewed: ceil(sqrt(n)) of them (+ all warn/fail/error); all | none
     "review_retries": 2,            # re-requests of a reel whose review came back null / omitted
@@ -98,7 +100,8 @@ JUDGMENT = {
     "plan": "reel-planner",
     "review": "qc-reviewer",
 }
-ORDER = ["intake", "analyze", "verify_style", "transcribe", "plan", "prepare", "render", "review", "deliver"]
+ORDER = ["intake", "analyze", "verify_style", "transcribe", "plan", "storyboard", "approve_storyboard",
+         "prepare", "render", "review", "deliver"]
 TERMINAL = ("succeeded", "partial", "needs_attention", "failed", "cancelled")
 ROLES = {"sample": "samples", "source": "sources", "music": "music", "sfx": "sfx", "image": "images"}
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp")
@@ -242,6 +245,7 @@ def _blank(jid):
             "plan_generation": 0, "render": None, "render_seq": 0, "encoder": None,
             "review": {"ledger": {}, "attempts_by_reel": {}, "rounds": 0, "notes": [], "errors": []},
             "findings": [], "repair": None, "repairs": [], "attempt": None, "attempt_seq": 0,
+            "storyboard": None, "storyboard_approval": None, "storyboard_feedback": [],
             "error": None, "errors": [], "attention": None, "deliver": None, "log": []}
 
 
@@ -266,6 +270,9 @@ def _migrate_policy(p):
         p[k] = copy.deepcopy(POLICY[k])
     if missing:
         p["filled_defaults"] = sorted(set(p.get("filled_defaults") or []) | set(missing))
+    if p.get("version", 0) < POLICY["version"]:
+        p["migrated_from"] = p.get("version")
+        p["version"] = POLICY["version"]
     return p
 
 
@@ -275,6 +282,8 @@ def _migrate(job):
     re-validates (cached work is reused) and judgment steps are asked again."""
     if int(job.get("schema") or 1) >= SCHEMA:
         job["policy"] = _migrate_policy(job.get("policy"))
+        for k, default in (("storyboard", None), ("storyboard_approval", None), ("storyboard_feedback", [])):
+            job.setdefault(k, copy.deepcopy(default))
         return job
     jid = job["id"]
     old_req = job.get("request") if isinstance(job.get("request"), dict) else {}
@@ -593,7 +602,7 @@ def add(jid, files=(), roles=None):
             added, n = {a["role"] for a in new}, job.get("needs")
             if job["status"].startswith("waiting:"):
                 job["status"], job["waiting"] = "waiting:worker", []
-            elif n and n["step"] in ("plan", "review") and added & {"source", "music"}:
+            elif n and n["step"] in ("plan", "review", "approve_storyboard") and added & {"source", "music", "sfx", "sample"}:
                 _log(job, f"need {n['need_id']} withdrawn: the new {'/'.join(sorted(added))} changes the plan",
                      "need_withdrawn", need_id=n["need_id"])
                 job["needs"], job["status"] = None, "waiting:worker"
@@ -616,9 +625,11 @@ def _key(job, step):
             "verify_style": lambda: [inp["samples"][:1]],
             "transcribe": lambda: [inp["sources"], _lang(job), pol["asr_provider"]],
             "plan": lambda: [inp["sources"], inp["music"], sv.get("sha256")],
-            "prepare": lambda: [pl.get("sha256"), pol["prepare"]],
+            "storyboard": lambda: [job["plan_generation"], job.get("inputs_rev"), _storyboard_fingerprint(job)],
+            "approve_storyboard": lambda: [_key(job, "storyboard"), (job.get("storyboard") or {}).get("sha256")],
+            "prepare": lambda: [pl.get("sha256"), pol["prepare"], (job.get("storyboard") or {}).get("key")],
             "render": lambda: [pl.get("sha256"), pol["encoder"], pol["require_gpu"], pol["allow_cpu_fallback"],
-                               pol["render_quality"]],
+                               pol["render_quality"], (job.get("storyboard") or {}).get("key")],
             "review": lambda: [pl.get("sha256"), (job.get("render") or {}).get("seq")],
             }.get(step, lambda: None)()
 
@@ -635,6 +646,13 @@ def _valid(job, step):
         return bool(job.get("style_version")) and Path(job["style_version"]["path"]).exists()
     if step == "plan":
         return bool(job.get("plan")) and Path(job["plan"]["path"]).exists()
+    if step in ("storyboard", "approve_storyboard"):
+        from . import storyboard
+        if step == "approve_storyboard":
+            a, b = job.get("storyboard_approval") or {}, job.get("storyboard") or {}
+            if a.get("by") != "user" or a.get("sha256") != b.get("sha256") or a.get("plan_generation") != job["plan_generation"]:
+                return False
+        return bool(job.get("storyboard")) and storyboard.intact(job["storyboard"])
     if step == "render":
         return isinstance(_manifest(job), dict)
     return True
@@ -653,7 +671,7 @@ def _next_step(job):
         return "transcribe"
     if not inp["samples"] or not inp["sources"]:
         return None
-    for s in ("plan", "prepare", "render", "review"):
+    for s in ("plan", "storyboard", "approve_storyboard", "prepare", "render", "review"):
         if not _valid(job, s):
             return s
     return "deliver"
@@ -757,6 +775,68 @@ def _open_need(job, step):
     """Publish the need for a judgment step. False when code settled it (a verified style reused,
     a new style re-pinned into an unchanged plan, nothing left to review): the loop goes on."""
     return {"verify_style": _need_style, "plan": _need_plan, "review": _need_review}[step](job)
+
+
+def _storyboard_fingerprint(job):
+    from . import storyboard
+    pl = job.get("plan") or {}
+    if not pl.get("path"):
+        return None
+    try:
+        if fsutil.sha256_file(pl["path"]) != pl["sha256"]:
+            return None
+        return storyboard.fingerprint(pl["path"], job["policy"]["storyboard"], job["policy"]["asr_provider"])
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _need_storyboard_approval(job):
+    board = job["storyboard"]
+    nid = _need_id(job, "approve_storyboard")
+    job["needs"] = {"step": "approve_storyboard", "agent": "user", "need_id": nid, "revision": None,
+                    "issued": _now(), "storyboard_sha256": board["sha256"], "page": board["page"],
+                    "sheet": board["sheet"], "manifest": board["manifest"], "frames": board["frames"],
+                    "estimated_render_frames": board["estimated_render_frames"], "limitations": board["limitations"],
+                    "plan_generation": job["plan_generation"], "errors": []}
+    job["status"] = "needs:approve_storyboard"
+    _log(job, "storyboard ready: full preparation and rendering await explicit user approval", "storyboard_ready")
+    return True
+
+
+def decide_storyboard(jid, decision, need_id, revision, sha256, notes=""):
+    """User-facing command only. Agents cannot complete this via `job done`.
+    Approval is for this need, revision and exact storyboard, never a future plan."""
+    if decision not in ("approve", "revise"):
+        raise Rejected("storyboard decision must be approve or revise", code="bad_decision")
+    if decision == "revise" and not str(notes).strip():
+        raise Rejected("revision feedback is required", code="no_feedback")
+    with _txn(jid) as job:
+        n, board = job.get("needs") or {}, job.get("storyboard") or {}
+        if (job["terminal"] or n.get("step") != "approve_storyboard" or n.get("need_id") != need_id
+                or n.get("revision") != revision or not sha256 or sha256 != board.get("sha256")
+                or sha256 != n.get("storyboard_sha256")):
+            raise Rejected("stale storyboard decision: quote the current need, revision and storyboard hash", code="stale")
+        if not _valid(job, "storyboard"):
+            raise Rejected("the storyboard or its inputs changed; run the worker to create a fresh preview", code="stale")
+        if decision == "approve":
+            job["storyboard_approval"] = {"need_id": need_id, "revision": revision, "sha256": sha256,
+                                          "plan_generation": job["plan_generation"], "by": "user", "at": _now(),
+                                          "notes": str(notes)[:4000]}
+            job["steps"]["approve_storyboard"] = {"done": True, "key": _key(job, "approve_storyboard"), "at": _now()}
+        else:
+            job["storyboard_feedback"] = (job.get("storyboard_feedback") or [])[-19:] + [
+                {"plan_generation": job["plan_generation"], "notes": str(notes)[:4000], "at": _now()}]
+            job["steps"]["plan"]["reopened"] = True
+            job["storyboard_approval"] = None
+            job["steps"].pop("approve_storyboard", None)
+        job["needs"], job["status"] = None, "waiting:worker"
+        _log(job, f"user storyboard decision: {decision}", f"storyboard_{decision}", storyboard_sha256=sha256)
+    return status(jid)
+
+
+def _require_storyboard_approval(job):
+    if not _valid(job, "storyboard") or not _valid(job, "approve_storyboard"):
+        raise JobError("full preparation/rendering requires approval of the current storyboard", code="approval_required")
 
 
 def _analysis_fp(style):
@@ -982,6 +1062,8 @@ def _accept_plan(job, prep, need_id, note):
                    "entry_hashes": prep["entry_hashes"], "need_id": need_id, "accepted": _now(),
                    "warnings": prep["warnings"][:50]}
     job["plan_generation"] = k
+    job["storyboard_approval"] = None
+    job["steps"].pop("approve_storyboard", None)
     job["steps"]["plan"] = {"done": True, "at": _now(), "key": _key(job, "plan"), "generation": k, "reels": len(reels),
                             "note": note}
     rep = job.get("repair")
@@ -1022,7 +1104,8 @@ def _need_plan(job):
                   request=job["request"], request_hash=job["request_hash"], fixes=rep.get("fixes") or None,
                   only=None if rep.get("style") else (rep.get("only") or None), repair_round=rep.get("round"),
                   plan_generation=int(job.get("plan_generation") or 0) + 1,
-                  previous_plan=(job.get("plan") or {}).get("path"), errors=job.pop("plan_errors", None) or [])
+                  previous_plan=(job.get("plan") or {}).get("path"), errors=job.pop("plan_errors", None) or [],
+                  storyboard_feedback=job.get("storyboard_feedback") or [])
 
 
 # ------------------------------------------------------------------ review bookkeeping
@@ -1448,6 +1531,11 @@ def _context(job, step):
     """Snapshot of what a step needs, taken under the lock; the work runs outside it."""
     pol = job["policy"]
     c = {"key": _key(job, step), "inputs_rev": job.get("inputs_rev"), "lang": _lang(job), "policy": dict(pol)}
+    if step in ("prepare", "render"):
+        _require_storyboard_approval(job)
+        c["storyboard"] = copy.deepcopy(job["storyboard"])
+        c["storyboard_approval"] = copy.deepcopy(job["storyboard_approval"])
+        c["plan_generation"] = job["plan_generation"]
     if step == "intake":
         c["files"] = [[i, f["path"], f.get("role")] for i, f in enumerate(job["files"])
                       if not f.get("asset") and not f.get("error")]
@@ -1455,6 +1543,9 @@ def _context(job, step):
         c["samples"] = list(job["inputs"]["samples"])
     elif step == "transcribe":
         c.update(sources=list(job["inputs"]["sources"]), provider=pol["asr_provider"])
+    elif step == "storyboard":
+        c.update(plan=job["plan"]["path"], plan_generation=job["plan_generation"],
+                 root=str(_dir(job["id"]) / "storyboards"), provider=pol["asr_provider"])
     elif step == "prepare":
         c.update(plan=job["plan"]["path"], provider=pol["asr_provider"])
     elif step == "render":
@@ -1544,6 +1635,7 @@ def _c_transcribe(job, ctx, res):
 
 
 def _w_prepare(ctx):
+    _check_approved_context(ctx, ctx["plan"])
     from . import source
     plan = _rj(ctx["plan"])
     if not isinstance(plan, dict):
@@ -1572,6 +1664,7 @@ def _prefetch_fonts(style_path):
 
 
 def _w_render(ctx):
+    _check_approved_context(ctx, ctx["snapshot"])
     from . import batch, readiness
     pol = ctx["policy"]
     enc = readiness.resolve_encoder(requested=pol["encoder"], require_gpu=pol["require_gpu"],
@@ -1699,16 +1792,45 @@ def _c_deliver(job, ctx, hashes):
          st, counts=counts, shortfall=shortfall, unresolved=len(unresolved))
 
 
-_WORK = {"intake": _w_intake, "analyze": _w_analyze, "transcribe": _w_transcribe, "prepare": _w_prepare,
+def _check_approved_context(ctx, plan_path):
+    from . import storyboard
+    b = ctx.get("storyboard") or {}
+    a = ctx.get("storyboard_approval") or {}
+    if (a.get("by") != "user" or a.get("sha256") != b.get("sha256")
+            or a.get("plan_generation") != ctx.get("plan_generation")
+            or not storyboard.intact(b) or b.get("key") != storyboard.fingerprint(
+            plan_path, ctx["policy"]["storyboard"], ctx["policy"]["asr_provider"])):
+        raise JobError("storyboard approval is missing or stale; regenerate and review the storyboard", code="approval_required")
+
+
+def _w_storyboard(ctx):
+    from . import storyboard
+    return storyboard.build(ctx["plan"], ctx["root"], ctx["policy"]["storyboard"], ctx["provider"])
+
+
+def _c_storyboard(job, ctx, board):
+    if ctx["key"] != _key(job, "storyboard") or board["key"] != _storyboard_fingerprint(job):
+        _log(job, "inputs changed during storyboarding; preview will be regenerated", "warning")
+        return
+    job["storyboard"] = board
+    job["storyboard_approval"] = None
+    job["steps"].pop("approve_storyboard", None)
+    job["steps"]["storyboard"] = {"done": True, "key": ctx["key"], "at": _now()}
+    _log(job, f"storyboard: {board['frames']} stills, {board['cache_hits']} reel previews reused", "storyboard_built")
+
+
+_WORK = {"intake": _w_intake, "analyze": _w_analyze, "transcribe": _w_transcribe, "storyboard": _w_storyboard, "prepare": _w_prepare,
          "render": _w_render, "deliver": _w_deliver}
-_COMMIT = {"intake": _c_intake, "analyze": _c_analyze, "transcribe": _c_transcribe, "prepare": _c_prepare,
+_COMMIT = {"intake": _c_intake, "analyze": _c_analyze, "transcribe": _c_transcribe, "storyboard": _c_storyboard, "prepare": _c_prepare,
            "render": _c_render, "deliver": _c_deliver}
 
 
 def _preflight(jid, att):
-    """Fail before any expensive work when the job requires a GPU encoder this host cannot run."""
+    """After storyboard approval, check a required GPU before full preparation/rendering."""
     job = _load(jid)
     pol = job["policy"]
+    if not _valid(job, "approve_storyboard"):
+        return
     if job["terminal"] or not (pol.get("require_gpu") or pol.get("encoder") == "nvenc"):
         return
     from . import readiness
@@ -1723,13 +1845,17 @@ def _preflight(jid, att):
 
 
 def _loop(jid, att, hb):
-    """Advance until the job needs an agent or input, or ends. State transitions are short
+    """Advance until the job needs an agent, user approval or input, or ends. Transitions are short
     fenced transactions; the media work between them runs without the lock."""
     _preflight(jid, att)
     while True:
         if _cancel_flag(jid).exists():
             raise _Interrupted("cancel")
         with _txn(jid, att) as job:
+            n = job.get("needs") or {}
+            if n.get("step") in ("approve_storyboard", "review") and not _valid(job, "storyboard"):
+                job["needs"] = None
+                job["status"] = "waiting:worker"
             if job["terminal"] or job.get("needs"):
                 job["_nosave"] = True
                 return job
@@ -1741,6 +1867,9 @@ def _loop(jid, att, hb):
                 if _open_need(job, step):
                     return job
                 continue
+            if step == "approve_storyboard":
+                _need_storyboard_approval(job)
+                return job
             ctx = _context(job, step)
             _mark_running(job, step)
         hb.beat(step)
@@ -2234,6 +2363,8 @@ def _next_hint(job, att):
     if att and att["running"]:
         return "wait"
     if job.get("needs"):
+        if job["needs"]["step"] == "approve_storyboard":
+            return "user:approve_storyboard"
         return f"agent:{job['needs']['agent']}"
     if job["status"] in ("waiting:sample", "waiting:source"):
         return "input"
@@ -2254,6 +2385,7 @@ def status(jid, job=None):
             "counts": d.get("counts") or (job.get("render") or {}).get("counts"),
             "findings_open": [_compact(f) for f in job.get("findings") or [] if f.get("status") == "open"][:100],
             "plan_generation": job.get("plan_generation"), "style_version": job.get("style_version"),
+            "storyboard": job.get("storyboard"), "storyboard_approval": job.get("storyboard_approval"),
             "encoder": job.get("encoder"), "error": job.get("error"), "attention": job.get("attention"),
             "request_hash": job.get("request_hash"), "policy_version": (job.get("policy") or {}).get("version"),
             "log": (job.get("log") or [])[-8:]}
