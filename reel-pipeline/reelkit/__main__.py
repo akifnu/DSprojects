@@ -4,6 +4,7 @@ and `batch`), logs and progress to stderr.
   reel check [--json] [--encoder auto|cpu|nvenc] [--require-gpu] [--asr-provider cpu|cuda] [--deep]
                                              readiness: tools, models, encoder, ASR provider (exit 1 = not ready)
   reel ingest FILE… [--kind sample|source|music|sfx|image]
+  reel import-url URL [--kind sample|source|music|sfx]   best available streams via yt-dlp
   reel assets [--kind K]
   reel sample REF [--lang en] [--force]      measured style spec + review sheet
   reel source REF [--lang en] [--prepare] [--asr-provider cpu|cuda]   transcript (+ editing copy)
@@ -92,6 +93,18 @@ def cmd_ingest(a):
     for f in a.files:
         x = store.ingest(f, a.kind)
         print(x.id, x.kind, x.meta["name"])
+
+
+def cmd_import_url(a):
+    from .download import ingest_url
+    try:
+        with _stdout_to_stderr():
+            x = ingest_url(a.url, a.kind)
+    except (ValueError, RuntimeError) as e:
+        _out({"error": str(e), "code": "import_failed"})
+        return 1
+    _out({"id": x.id, "kind": x.kind, "file": str(x.path), "sha256": x.meta["sha256"],
+          "provenance": str(x.cache("import.json"))})
 
 
 def cmd_assets(a):
@@ -384,6 +397,10 @@ def _parser():
     p.add_argument("files", nargs="+")
     p.add_argument("--kind", default="source", choices=("sample", "source", "music", "sfx", "image", "other"))
     p.set_defaults(fn=cmd_ingest)
+    p = sub.add_parser("import-url", help="download the best available media streams with yt-dlp")
+    p.add_argument("url")
+    p.add_argument("--kind", default="source", choices=("sample", "source", "music", "sfx"))
+    p.set_defaults(fn=cmd_import_url)
     p = sub.add_parser("assets")
     p.add_argument("--kind")
     p.set_defaults(fn=cmd_assets)
@@ -454,3 +471,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
+

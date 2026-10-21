@@ -1,0 +1,2 @@
+# Optional URL ingestion; local-file editing has no yt-dlp dependency.
+yt-dlp==2026.8.19

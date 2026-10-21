@@ -3,6 +3,7 @@ coverage clamping, and real face tracking on a moving face (if the test image ex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,20 @@ from reelkit import ff, reframe, render
 from reelkit.paths import FFMPEG, MODELS
 
 LENA = MODELS / "testdata" / "lena.jpg"
+
+
+class Detection(unittest.TestCase):
+    def test_confidence_comes_from_yunet_score_not_eye_coordinate(self):
+        # Equal boxes: the more confident face must win regardless of eye x.
+        faces = np.array([[10, 20, 40, 60, 500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.8],
+                          [10, 20, 40, 60, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.95]], np.float32)
+        detector = Mock()
+        detector.detect.return_value = (None, faces)
+        with patch.object(reframe, "_detector", return_value=detector):
+            got = reframe.detect_image(np.zeros((100, 200, 3), np.uint8))
+        self.assertAlmostEqual(got[0][4], 0.8)
+        self.assertAlmostEqual(got[1][4], 0.95)
+        self.assertTrue(all(0 <= face[4] <= 1 for face in got))
 
 
 class Path_(unittest.TestCase):
@@ -74,3 +89,4 @@ class Faces(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

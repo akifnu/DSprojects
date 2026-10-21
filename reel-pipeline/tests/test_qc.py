@@ -4,6 +4,7 @@ import copy
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from reelkit import qc, render
@@ -73,6 +74,44 @@ class QC(unittest.TestCase):
         out = qc.sheet(self.clean, rep, self.tl, str(D / "clean.sheet.jpg"))
         self.assertTrue(Path(out).stat().st_size > 10000)
 
+    def test_missing_asr_blocks_caption_verification(self):
+        with patch("reelkit.asr.transcribe", side_effect=RuntimeError("model missing")):
+            rep = qc.check(self.clean, self.tl)
+        self.assertIn("captions", checks(rep, "fail"))
+        self.assertEqual(rep["metrics"]["caption_verification"], "unavailable")
+
+    def test_empty_asr_blocks_caption_verification(self):
+        with patch("reelkit.asr.transcribe", return_value={"words": []}):
+            rep = qc.check(self.clean, self.tl)
+        self.assertIn("captions", checks(rep, "fail"))
+
+    def test_explicit_no_asr_is_reported_as_skipped(self):
+        with patch("reelkit.asr.transcribe") as transcribe:
+            rep = qc.check(self.clean, self.tl, asr=False)
+        transcribe.assert_not_called()
+        self.assertNotIn("captions", checks(rep, "fail"))
+        self.assertEqual(rep["metrics"]["caption_verification"], "skipped")
+
+    def test_empty_supplied_transcript_does_not_pass(self):
+        rep = qc.check(self.clean, self.tl, transcript_words=[], asr=False)
+        self.assertIn("captions", checks(rep, "fail"))
+
+    def test_editorial_title_is_excluded_from_speech_alignment(self):
+        tl = copy.deepcopy(self.tl)
+        tl["text"] = [{"s": 0, "e": 1, "text": "A DIFFERENT HOOK", "role": "title",
+                       "style": {"font": "Arimo", "size": 20, "y": -80}}]
+        rep = qc.check(self.clean, tl, transcript_words=WORDS)
+        self.assertEqual(rep["metrics"]["caption_wer"], 0)
+
+    def test_title_only_does_not_require_speech(self):
+        tl = copy.deepcopy(self.tl)
+        for c in tl["captions"]:
+            c["role"] = "title"
+        with patch("reelkit.asr.transcribe") as transcribe:
+            rep = qc.check(self.clean, tl)
+        transcribe.assert_not_called()
+        self.assertEqual(rep["metrics"]["caption_verification"], "not_applicable")
+
     def test_black_frames(self):
         bad = D / "black.mp4"
         ff("-i", self.clean, "-vf", "drawbox=c=black:t=fill:enable='between(t,1.0,1.4)'",
@@ -130,3 +169,4 @@ class QC(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

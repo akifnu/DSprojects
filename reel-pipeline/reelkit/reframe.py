@@ -38,7 +38,10 @@ def detect_image(img, min_rel=0.03):
     _, faces = _detector(w, h).detect(img)
     out = []
     for f in faces if faces is not None else []:
-        x, y, fw, fh, score = f[:5]
+        # YuNet: box (4), five x/y landmarks (10), then confidence.
+        # f[4] is the first eye's x coordinate, not a probability.
+        x, y, fw, fh = f[:4]
+        score = f[14]
         if fw / w < min_rel:
             continue
         out.append((float((x + fw / 2) / w), float((y + fh / 2) / h), float(fw / w), float(fh / h), float(score)))
@@ -188,3 +191,4 @@ def clip_keyframes(path_, start, dur, canvas, scale_at, info=None, fps=30.0, det
         return {"x": xk, "y": 0, "subject": True}
     xk, yk = offsets(cam, info["width"], info["height"], canvas, scale_at)
     return {"x": xk, "y": yk, "subject": True}
+

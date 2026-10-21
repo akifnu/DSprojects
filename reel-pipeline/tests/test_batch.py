@@ -78,8 +78,12 @@ class Batch(unittest.TestCase):
     def test_interrupt_resume_manifest_and_invalidation(self):
         plan = write_plan()
         bdir = DATA / "batches" / "testbatch"
-        env = dict(os.environ, REELKIT_DATA=str(DATA), PYTHONPATH=str(ROOT))
-        code = f"from reelkit import batch; batch.run({str(plan)!r}, jobs=2, draft=True, asr=False)"
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")]))
+        # Mirror this test's batch.DATA override. Changing REELKIT_DATA only in
+        # the child would also change its font cache, legitimately invalidating
+        # the render when the parent resumes with a different font bank.
+        code = (f"from pathlib import Path; from reelkit import batch; batch.DATA=Path({str(DATA)!r}); "
+                f"batch.run({str(plan)!r}, jobs=2, draft=True, asr=False)")
         proc = subprocess.Popen([sys.executable, "-c", code], env=env, start_new_session=True,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.time() + 120
@@ -112,7 +116,12 @@ class Batch(unittest.TestCase):
         m2 = batch.run(plan, jobs=2, draft=True, asr=False)
         cached = {e["id"]: e["cached"] for e in m2["reels"]}
         self.assertEqual(cached, {"r0": True, "r1": True, "r2": False, "r3": True})
+        self.assertGreater(m2["generation"], m["generation"])
+        # Published generations retain the original file even after a later edit.
+        first = next(e for e in m["reels"] if e["id"] == "r2")
+        self.assertEqual(batch.fsutil.sha256_file(first["file"]), first["render_sha256"])
 
 
 if __name__ == "__main__":
     unittest.main()
+

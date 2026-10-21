@@ -409,13 +409,25 @@ def check(reel_mp4, timeline=None, style=None, transcript_words=None, asr=True, 
 
     # ---- captions vs speech
     spoken = transcript_words
-    if spoken is None and asr and a is not None and (caps or tl is None):
+    # Titles are editorial text, not a verbatim transcript of the voice.
+    speech_caps = [c for c in caps if c[0].get("role") != "title"]
+    verify = bool(speech_caps) and (asr or transcript_words is not None)
+    metrics["caption_verification"] = "pending" if verify else "skipped" if speech_caps else "not_applicable"
+    if spoken is None and asr and a is not None and (speech_caps or tl is None):
         from . import asr as asr_mod
         lang = lang or ((style or {}).get("audio") or {}).get("speech", {}).get("lang") or "en"
         try:
             spoken = asr_mod.transcribe(reel_mp4, lang)["words"]
-        except Exception as e:      # missing model etc.: report, don't crash the batch
-            _issue(issues, "captions", "warn", f"could not re-transcribe: {e}")
+        except Exception as e:      # failed verification blocks delivery, without crashing the batch
+            metrics["caption_verification"] = "unavailable"
+            _issue(issues, "captions", "fail" if verify else "warn", f"could not re-transcribe: {e}")
+    if verify:
+        if not spoken or not any(_norm(w["w"]) for w in spoken):
+            if metrics["caption_verification"] != "unavailable":
+                metrics["caption_verification"] = "unavailable"
+                _issue(issues, "captions", "fail", "captions could not be verified: no speech words available")
+        else:
+            metrics["caption_verification"] = "checked"
     if spoken:
         max_pause = ((style or {}).get("pacing") or {}).get("max_pause")
         limit = (max_pause if max_pause is not None else 0.8) + 0.15
@@ -426,19 +438,24 @@ def check(reel_mp4, timeline=None, style=None, transcript_words=None, asr=True, 
             _issue(issues, "pause", "warn", f"{g:.2f}s pause (style allows {limit - 0.15:.2f}s)", (s, e))
         if spoken[0]["s"] > 0.6:
             _issue(issues, "pause", "warn", f"first word at {spoken[0]['s']:.2f}s (hook should start immediately)")
-    if spoken and caps:
+    if spoken and speech_caps:
         cap_words = []
-        for ev, _, _, _ in caps:
+        for ev, _, _, _ in speech_caps:
             ws = ev.get("words") or []
             if ws:
                 cap_words += [(_norm(w["w"]), w["s"]) for w in ws if _norm(w["w"])]
             else:
                 toks = _tokens(ev["text"].split())
                 cap_words += [(t, ev["s"] if i == 0 else None) for i, t in enumerate(toks)]
-        sp = [(_norm(w["w"]), w["s"]) for w in spoken if _norm(w["w"])]
+        titles = [ev for ev, _, _, _ in caps if ev.get("role") == "title"]
+        def captioned(w):
+            # A hook/CTA may replace captions for part of the voice. Overlay
+            # titles must not hide speech that still has ordinary captions.
+            return not any(ev["s"] <= w["s"] < ev["e"] for ev in titles) or \
+                any(ev["s"] <= w["s"] < ev["e"] for ev, _, _, _ in speech_caps)
+        sp = [(_norm(w["w"]), w["s"]) for w in spoken if _norm(w["w"]) and captioned(w)]
         cap_words = [c for c in cap_words if c[0]]
-        roles = [ev.get("role") for ev, _, _, _ in caps]
-        if cap_words and sp and not all(r == "title" for r in roles):
+        if cap_words and sp:
             wer, offs = _align(cap_words, sp)
             metrics["caption_wer"] = round(wer, 3)
             if wer > 0.35:
@@ -730,3 +747,4 @@ def _main():
 
 if __name__ == "__main__":
     _main()
+

@@ -188,9 +188,10 @@ def chunk_captions(words, cfg, emphasis=()):
 
 # ------------------------------------------------------------------ shots
 
-def split_shots(runs, target):
+def split_shots(runs, target, emphasis=()):
     """Runs → shots [(run_index, src_s, src_e)], long runs cut at word boundaries."""
     shots = []
+    emph = {_bare(w) for w in emphasis}
     for ri, r in enumerate(runs):
         d = r["e"] - r["s"]
         if d <= 1.6 * target or len(r["words"]) < 4:
@@ -200,7 +201,14 @@ def split_shots(runs, target):
         cuts, ws = [], r["words"]
         for j in range(1, n):
             want = r["s"] + d * j / n
-            best = min(range(1, len(ws)), key=lambda q: abs(ws[q]["s"] - want))
+            # Stay near the reference pacing, but prefer an important word or a
+            # phrase boundary over an arbitrary word at exactly the target time.
+            def cost(q):
+                gap = max(0.0, ws[q]["s"] - ws[q - 1]["e"])
+                cue = (0.45 if _bare(ws[q]["w"]) in emph else 0.0) + \
+                      (0.25 if ws[q - 1]["w"].endswith(END + (",", ";", ":")) else 0.0) + min(0.2, gap)
+                return abs(ws[q]["s"] - want) - cue
+            best = min(range(1, len(ws)), key=cost)
             t = round((ws[best - 1]["e"] + ws[best]["s"]) / 2, 4)
             if (not cuts or t - cuts[-1] > 0.6) and t - r["s"] > 0.6 and r["e"] - t > 0.6:
                 cuts.append(t)
@@ -211,6 +219,45 @@ def split_shots(runs, target):
 
 def _every(rate):
     return 0 if not rate or rate <= 0 else max(1, int(round(1 / min(1.0, rate))))
+
+
+def _moment_scores(events, words, emphasis):
+    """Editorial cues supplied by the planner plus sentence and pause boundaries.
+    These are timing hints, not a claim to infer emotion from the transcript."""
+    emph = {_bare(w) for w in emphasis}
+    scores = []
+    for ev in events:
+        s, e = ev["start"], ev["start"] + ev["dur"]
+        inside = [i for i, w in enumerate(words) if s <= w["s"] < e]
+        score = 8.0 if any(_bare(words[i]["w"]) in emph for i in inside) else 0.0
+        if inside:
+            i = inside[0]
+            # A sentence cue belongs to its boundary, not every later shot in it.
+            if words[i]["s"] - s <= 0.3:
+                if i == 0 or words[i - 1]["w"].endswith(END):
+                    score += 3.0
+                if i and words[i]["s"] - words[i - 1]["e"] >= 0.18:
+                    score += 2.0
+        scores.append(score)
+    return scores
+
+
+def _select_moments(events, rate, scores, eligible=None, min_spacing=0.8):
+    """Use the sample rate as an effect budget, rank by content cues, and spread
+    equally strong candidates apart. Never place effects on every Nth shot."""
+    candidates = list(range(len(events))) if eligible is None else sorted(eligible)
+    if not candidates or not rate or rate <= 0:
+        return set()
+    count = max(1, int(round(min(1.0, rate) * len(candidates))))
+    selected = set()
+    while candidates and len(selected) < count:
+        def distance(i):
+            return min((abs(events[i]["start"] - events[j]["start"]) for j in selected), default=0.0)
+        i = max(candidates, key=lambda k: (scores[k], distance(k), -k))
+        selected.add(i)
+        candidates = [k for k in candidates if k != i and
+                      abs(events[k]["start"] - events[i]["start"]) >= min_spacing]
+    return selected
 
 
 def _auto_keywords(events, rate):
@@ -548,24 +595,32 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     # ---- shots, framing, transitions
     target = float(_g(style, "pacing", "median_shot", default=0) or _g(style, "pacing", "avg_shot", default=2.5) or 2.5)
     target = min(6.0, max(0.9, target))
-    shots = split_shots(runs, target)
+    shots = split_shots(runs, target, reel.get("emphasis", ()))
     mot = style.get("motion") or {}
     levels = [float(x) for x in (mot.get("punch_scales") or [1.0])] or [1.0]
     base = min(levels)
     levels = [max(1.0, x / base) for x in levels]           # relative to the widest framing
-    punch_every = _every(mot.get("punch_rate"))
-    push_every = _every(mot.get("push_rate"))
     st_shots = style.get("shots") or []
     pushes = [s_["move"]["type"] for s_ in st_shots if (s_.get("move") or {}).get("type") in ZOOMS]
     push_out = sum(t_ == "zoom_out" for t_ in pushes) > len(pushes) / 2
     bursts = [m_ for s_ in st_shots for m_ in (s_.get("moves") or []) if m_.get("type") in ZOOMS and m_.get("scale")]
-    burst_every = _every(sum(1 for s_ in st_shots if any(m_.get("type") in ZOOMS for m_ in s_.get("moves") or []))
-                         / max(1, len(st_shots))) if bursts else 0
+    burst_rate = sum(1 for s_ in st_shots if any(m_.get("type") in ZOOMS for m_ in s_.get("moves") or [])) \
+                 / max(1, len(st_shots)) if bursts else 0
     emph = {_bare(w) for w in reel.get("emphasis", ())}
     n_burst = 0
     special = _g(style, "transitions", "special") or {}
-    trans_every = _every(special.get("rate")) if special.get("type") not in (None, "cut") else 0
-    media, video, run_cut_count, probes = {}, [], 0, {}
+    events = [{"start": starts[ri] + s - runs[ri]["s"], "dur": e - s} for ri, s, e in shots]
+    scores = _moment_scores(events, words, emph)
+    punch_at = _select_moments(events, mot.get("punch_rate"), scores, range(1, len(shots)))
+    burst_at = _select_moments(events, burst_rate, scores,
+                               [i for i, ev in enumerate(events) if ev["dur"] > 0.8])
+    push_at = _select_moments(events, mot.get("push_rate"), scores,
+                              [i for i, ev in enumerate(events) if ev["dur"] > 0.8 and i not in burst_at])
+    sentence_cuts = [n for n, (ri, _, _) in enumerate(shots) if n and shots[n - 1][0] != ri
+                     and runs[ri - 1]["words"] and runs[ri - 1]["words"][-1]["w"].endswith(END)]
+    trans_at = _select_moments(events, special.get("rate"), scores, sentence_cuts) \
+               if special.get("type") not in (None, "cut") else set()
+    media, video, probes = {}, [], {}
     level = 0
     for n, (ri, s, e) in enumerate(shots):
         r = runs[ri]
@@ -573,28 +628,24 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
         mkey = media.setdefault(m["path"], f"v{len(media)}")
         start = round(starts[ri] + (s - r["s"]), 4)
         dur = round(e - s, 4)
-        if n and punch_every and n % punch_every == 0:
+        if n in punch_at:
             level = (level + 1) % len(levels)
         z = levels[level]
         clip = {"media": mkey, "start": start, "in": off, "dur": dur, "fit": "cover"}
         keys = None
-        if burst_every and (n + 1) % burst_every == 0:
+        if n in burst_at:
             keys = _burst(z, bursts[n_burst % len(bursts)], start, dur, words, emph)
             n_burst += 1 if keys else 0
         if keys:
             clip["scale"] = keys
-        elif push_every and n % push_every == 0 and dur > 0.8:
+        elif n in push_at:
             z1 = z * (1 + float(mot.get("push_scale_per_s") or 0.03) * dur)
             a_, b_ = (z1, z) if push_out else (z, z1)
             clip["scale"] = [[0, round(a_, 4)], [dur, round(b_, 4), mot.get("push_ease") or "inout"]]
         else:
             clip["scale"] = round(z, 4)
-        new_run = n > 0 and shots[n - 1][0] != ri
-        sentence_end = new_run and runs[ri - 1]["words"] and runs[ri - 1]["words"][-1]["w"].endswith(END)
-        if sentence_end:          # special transitions only between sentences, never inside one
-            run_cut_count += 1
-            if trans_every and run_cut_count % trans_every == 0:
-                clip["transition_in"] = {"type": special["type"], "dur": float(special.get("dur", 0.3))}
+        if n in trans_at:         # special transitions only between sentences, never inside one
+            clip["transition_in"] = {"type": special["type"], "dur": float(special.get("dur", 0.3))}
         scale_at = (lambda sc: (lambda tt: render.kf(sc, tt, 1.0)))(clip["scale"])
         if reframing:
             info = probes.get(m["path"])
@@ -625,9 +676,9 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
             cap_events = [c for c in cap_events if c["s"] >= hook_dur - 0.05]
             if cap_events:
                 cap_events[0]["s"] = max(cap_events[0]["s"], hook_dur)
-            cap_events.insert(0, {"s": 0.0, "e": round(hook_dur, 3), "text": reel["title_text"]})
+            cap_events.insert(0, {"s": 0.0, "e": round(hook_dur, 3), "text": reel["title_text"], "role": "title"})
         else:
-            text_events.append({"s": 0.0, "e": round(hook_dur, 3), "text": reel["title_text"], "style": "title"})
+            text_events.append({"s": 0.0, "e": round(hook_dur, 3), "text": reel["title_text"], "style": "title", "role": "title"})
     if reel.get("cta"):
         cta_s = _g(style, "structure", "cta", "s")
         sdur = _g(style, "structure", "duration")
@@ -639,7 +690,7 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                 continue
             c["e"] = min(c["e"], cs)
             kept.append(c)
-        cap_events = kept + [{"s": cs, "e": round(total, 3), "text": reel["cta"]}]
+        cap_events = kept + [{"s": cs, "e": round(total, 3), "text": reel["cta"], "role": "title"}]
     cap_events = [c for c in cap_events if c["e"] - c["s"] >= 0.1]
 
     # ---- audio
@@ -666,13 +717,14 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
     voice_db = _voice_db(runs, envelopes)
     moments = []
     if "cut" in prof:
-        ce = _every(prof["cut"]["rate"])
-        moments += [(t_, prof["cut"]) for i, t_ in enumerate(c["start"] for c in video[1:]) if (i + 1) % ce == 0]
+        chosen = _select_moments(events, prof["cut"]["rate"], scores, range(1, len(video)))
+        moments += [(events[i]["start"], prof["cut"]) for i in sorted(chosen)]
     if "caption" in prof:
-        pe = _every(prof["caption"]["rate"])
         taken = [t_ for t_, _ in moments]
-        moments += [(c["s"], prof["caption"]) for i, c in enumerate(cap_events)
-                    if i % pe == 0 and all(abs(c["s"] - t_) > 0.15 for t_ in taken)]
+        cevents = [{"start": c["s"], "dur": c["e"] - c["s"]} for c in cap_events]
+        chosen = _select_moments(cevents, prof["caption"]["rate"], _moment_scores(cevents, words, emph),
+                                  [i for i, c in enumerate(cap_events) if all(abs(c["s"] - t_) > 0.15 for t_ in taken)])
+        moments += [(cap_events[i]["s"], prof["caption"]) for i in sorted(chosen)]
     for t_, p in sorted(moments, key=lambda m_: m_[0]):
         kd = p["kind"]
         path_ = _sfx_path(kd, plan)
@@ -745,3 +797,4 @@ def compile_plan(plan, out_root, reels=None, reframing=True, provider=None):
         out[r["id"]] = compile_reel(ctx.plan, r, ctx.style, Path(out_root) / "reels" / r["id"], reframing=reframing,
                                     **ctx.shared())
     return out
+

@@ -115,6 +115,40 @@ containers, pass `--gpus all`; the image sets NVIDIA_DRIVER_CAPABILITIES=compute
 
 ## The production line
 
+### Import footage from a URL
+
+```
+python3 -m pip install -r reel-pipeline/requirements-url.txt
+reel-pipeline/reel import-url 'https://…' --kind source
+```
+
+This optional yt-dlp importer selects the best available video plus audio (or the
+best combined stream), remuxes split streams into MKV without a lossy transcode,
+then ingests the completed file into the verified asset store. Music/SFX imports
+select the best audio. The JSON result includes `id`, `file` and an `import.json`
+provenance record. Use its local `file` in `reel job new --source FILE`, or use its
+asset `id` with `reel source ID`. Playlists are rejected; failed downloads clean
+their staging directory. Local-file jobs do not require yt-dlp.
+
+HyperFrames was considered for richer HTML motion graphics. The core compositor
+remains in use: the available fixtures do not establish that a browser renderer
+improves these talking-head edits. A renderer migration needs matched reference
+renders, timing/audio checks and a measured visual comparison first.
+
+### Effect timing and caption verification
+
+The compiler uses the reference effect rates as budgets. Planner `emphasis` words,
+sentence boundaries and pauses rank effect opportunities, with minimum spacing;
+punches, pushes, transitions and SFX no longer follow an every-N-shot cadence.
+These cues improve placement control; they do not measure audience retention or
+infer emotion. The planner should mark a few words carrying the hook and payoff.
+
+Caption QC fails when verification is requested but re-transcription errors or
+returns no words. Reports record `caption_verification` as `checked`, `unavailable`,
+`skipped` (explicit ASR opt-out), or `not_applicable`. Hook/CTA text is marked as
+editorial `role: title` and excluded from verbatim speech matching. Technical QC
+failure continues to block delivery regardless of an agent's review decision.
+
 | Step | Command | What it does |
 |---|---|---|
 | ingest | `reel ingest FILE… --kind sample\|source\|music\|sfx\|image` | content-addressed store (private verified copies), duplicates detected |
@@ -154,8 +188,32 @@ cd reel-pipeline && python3 -m unittest discover -s tests -v
 Round-trip tests: content is rendered with known settings, then the analysers
 must recover those settings, and the QC gate must catch injected defects.
 
-Not yet implemented (FIX-10 of the fix plan): there is no CI workflow for reel-pipeline,
-and no regression suites for the orchestration, the workflow (with stubbed agents), the
-review ledger, manifest generations, cache invalidation, the readiness checks or the
-process-failure paths (R1–R11). Until they exist, those parts are verified only by review
-and static checks, not by an automated release gate.
+`.github/workflows/reel-pipeline-ci.yml` runs on relevant pushes and pull requests.
+Its required core suite covers editing/rendering, a complete job with stubbed
+analysis and agent answers but real ingest/render/QC/delivery, stale and repeated
+answers, review/render fencing, damaged state recovery, cancellation/restart,
+bounded retries, worker death, immutable manifest generations, cache tampering,
+encoder fallback policy, process timeouts and atomic output failures. URL-import
+tests mock the downloader; they do not depend on a live media website.
+
+```
+cd reel-pipeline
+python3 -m pip install -r requirements.txt -r requirements-url.txt
+bash tests/bootstrap.sh
+REELKIT_OFFLINE=1 python3 tests/run_suite.py --suite core -v
+REELKIT_OFFLINE=1 python3 tests/run_suite.py --suite analysis -v
+```
+
+Bootstrap installs the smaller test profile (ffmpeg 9, YuNet, a moving-face image,
+OCR package models and the font bank). Speech fixtures carry current ASR
+fingerprints; production speech-model inference and the Claude JavaScript
+controller are not covered by this profile. The private R1 real-speech test skips
+when its source/model are absent.
+
+**Known baseline failures:** the existing `test_sample_text.py` round-trip suite
+fails caption-track/title detection and font/highlight/animation recovery checks.
+It runs as a visible diagnostic CI step with `continue-on-error`, outside the
+required core gate. Full `unittest discover` and `run_suite.py --suite all` still
+include it and return failure. A green core CI result is not evidence that sample
+caption-style recovery is correct; review the measured style against the sample.
+

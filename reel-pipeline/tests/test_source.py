@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from reelkit import ff, source, store
+from reelkit import asr, ff, source, store
 from reelkit.paths import FFMPEG
 
 
@@ -69,14 +69,14 @@ class Source(unittest.TestCase):
         whole = source.prepare(self.asset, [(0, 5), (6, 11)], fps=30, short_side=360)
         self.assertEqual([(m["s"], m["e"]) for m in whole], [(0.0, 12.0)])
         index = json.loads(self.asset.cache("mezz/index.json").read_text())
-        self.assertTrue(all(os.path.exists(m["path"]) for m in index))
+        self.assertTrue(all((self.asset.cache("mezz") / m["file"]).is_file() for m in index))
 
     def test_audio_is_lossless_48k_and_transcript_is_cached(self):
         p = source.audio(self.asset)
         info = ff.probe(p)
         self.assertEqual((info["acodec"], info["sample_rate"], info["channels"]), ("flac", 48000, 2))
         self.assertAlmostEqual(info["duration"], 12.0, delta=0.1)
-        fake = {"lang": "en", "timing": "word", "words": [], "sentences": []}
+        fake = {"lang": "en", "timing": "word", "fingerprint": asr.fingerprint("en"), "words": [], "sentences": []}
         self.asset.cache("transcript.en.json").write_text(json.dumps(fake))
         self.assertEqual(source.transcript(self.asset, "en"), fake)
 
@@ -84,8 +84,9 @@ class Source(unittest.TestCase):
         copies = source.prepare(self.asset, [(2.0, 3.0)], fps=30, short_side=360)
         lk = source.look(self.asset, copies)
         self.assertEqual(len(lk["L"]), 101)
-        self.assertTrue(self.asset.cache("look.json").exists())
+        self.assertTrue(list(self.asset.dir.glob("look.*.json")))
 
 
 if __name__ == "__main__":
     unittest.main()
+

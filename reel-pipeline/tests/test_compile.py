@@ -77,6 +77,25 @@ class Units(unittest.TestCase):
         self.assertEqual((st["size"], st["y"], st["max_width"], st["stroke"]["width"], st["box"]["pad_x"],
                           st["box"]["radius"], st["highlight"]["box"]["pad_x"]), (28, 100, 0.8, 2.5, 5, 4, 3))
 
+    def test_effects_follow_emphasis_when_the_important_word_moves(self):
+        events = [{"start": i * 2.0, "dur": 2.0} for i in range(6)]
+        for position in (1, 4):
+            words = [{"w": "payoff" if i == position else "ordinary", "s": i * 2.0, "e": i * 2.0 + 1}
+                     for i in range(6)]
+            scores = C._moment_scores(events, words, ["payoff"])
+            chosen = C._select_moments(events, 1 / 6, scores)
+            self.assertEqual(chosen, {position})
+
+    def test_effect_budget_spacing_and_disabled_style(self):
+        events = [{"start": t, "dur": 1.0} for t in (0, 0.2, 0.4, 2, 4, 6)]
+        scores = [8, 8, 8, 0, 0, 0]
+        chosen = C._select_moments(events, 0.5, scores)
+        self.assertEqual(len(chosen), 3)
+        self.assertLessEqual(len(chosen & {0, 1, 2}), 1)
+        self.assertEqual(C._select_moments(events, 0, scores), set())
+        self.assertEqual(C._select_moments(events, 1, scores, []), set())
+        self.assertEqual(chosen, C._select_moments(events, 0.5, scores))
+
     def test_long_runs_split_at_word_boundaries(self):
         run = {"s": 0.0, "e": 6.0, "words": timed("a b c d e f g h i j k l m n o p q r s t", 0.05)}
         shots = C.split_shots([run], target=2.0)
@@ -100,7 +119,8 @@ class EndToEnd(unittest.TestCase):
                         str(src)], check=True)
         cls.asset = store.ingest(src, "source")
         words = [{"w": w, "s": s, "e": e} for w, s, e in WORDS]
-        tr = {"lang": "en", "timing": "word", "duration": 12, "words": words, "sentences": asr.sentences(words)}
+        tr = {"lang": "en", "timing": "word", "fingerprint": asr.fingerprint("en"),
+              "duration": 12, "words": words, "sentences": asr.sentences(words)}
         cls.asset.cache("transcript.en.json").write_text(json.dumps(tr))
 
     @classmethod
@@ -112,11 +132,13 @@ class EndToEnd(unittest.TestCase):
         style["grade"]["look"] = {"L": list(np.linspace(8, 92, 101)),
                                   "zones": {z: {"a": 2.0, "b": 8.0, "sd": 12.0} for z in ("shadows", "mids", "highlights")},
                                   "chroma": {"50": 12.0}}
-        plan = {"name": "t", "style": style, "output": {"width": 360, "height": 640, "fps": 30, "quality": "draft"},
+        style_path = self.tmp / "style.json"
+        style_path.write_text(json.dumps(style))
+        plan = {"name": "t", "style": str(style_path), "output": {"width": 360, "height": 640, "fps": 30, "quality": "draft"},
                 "sources": {"S": self.asset.id},
-                "reels": [{"id": "r01", "segments": [{"src": "S", "sentences": [0, 1]}], "title_text": "WATCH THIS",
+                "reels": [{"id": "r01", "segments": [{"src": "S", "sentences": [0, 2]}], "title_text": "WATCH THIS",
                            "cta": "Follow!", "emphasis": ["best"]},
-                          {"id": "r02", "hook": {"src": "S", "sentences": [2]}, "segments": [{"src": "S", "sentences": [0, 0]}]}]}
+                          {"id": "r02", "hook": {"src": "S", "sentences": [3]}, "segments": [{"src": "S", "sentences": [0, 0]}]}]}
         paths = C.compile_plan(plan, self.tmp / "batch")
         tl = json.loads(Path(paths["r01"]).read_text())
         self.assertEqual(tl["meta"]["words"], ["Hello", "everyone.", "this", "is", "the", "best", "trick.",
@@ -181,3 +203,4 @@ class RealSpeech(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

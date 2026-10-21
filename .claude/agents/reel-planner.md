@@ -35,7 +35,10 @@ Rules:
   sample's captions use — e.g. romanised lines), keyed by sentence id. `emphasis` = the key word of
   each caption when the sample marks keywords (style.captions.style.highlight.mode == "keyword");
   captions you give none get their strongest word marked automatically at the sample's rate. With
-  "active" (karaoke) highlights, emphasis is not drawn. `cta` only if the sample has one
+  "active" (karaoke) highlights, emphasis is not drawn. Always supply a few meaningful
+  `emphasis` words for the hook, contrast and payoff: the compiler also uses these cues to
+  place punches, pushes and sound effects within the sample's effect budget. Prefer words
+  that carry the idea; do not mark every word. `cta` only if the sample has one
   (style.structure.cta).
 - `output.loudness`: leave it out — reels match the sample's measured loudness.
 - Large batches: read the transcript in chunks of ~400 lines, note candidates with sentence ids,
@@ -54,3 +57,4 @@ transcripts and the request; if it is rejected, read the errors it prints, fix p
 again (at most 3 times — every rejection counts against the job's budget).
 
 Return a one-line summary per reel (id, duration, hook line) and whether the plan was accepted.
+

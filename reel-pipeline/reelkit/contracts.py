@@ -731,7 +731,7 @@ TIMELINE_KEYS = ("width", "height", "fps", "duration", "background", "media", "v
                  "grade", "audio", "encode", "meta")
 CLIP_KEYS = ("media", "start", "in", "dur", "fit", "scale", "x", "y", "rotation", "opacity", "speed", "track",
              "subject", "transition_in", "hold_last", "kind", "meta")
-EVENT_KEYS = ("s", "e", "text", "words", "style", "meta")
+EVENT_KEYS = ("s", "e", "text", "words", "style", "role", "meta")
 AUDIO_CLIP_KEYS = ("media", "start", "in", "dur", "role", "mono", "gain_db", "fade_in", "fade_out", "meta")
 GRADE = {"lut": _nonempty, "sharpen": NONNEG, "grain": NONNEG, "vignette": NONNEG}
 ENCODE = {"preset": X264_PRESETS, "crf": number(lo=0, hi=51), "cq": number(lo=0, hi=51), "lossless": _boolean}
@@ -848,6 +848,8 @@ def _events(r, name, evs, styles, dur):
         elif dur is not None and s >= dur:
             r.warn(w, f"starts at {s:g} s, after the timeline ends ({dur:g} s)")
         _check(r, f"{w}.text", ev.get("text"), _string)
+        if "role" in ev:
+            _check(r, f"{w}.role", ev["role"], _among("caption", "title"))
         if isinstance(ev.get("text"), str) and not ev["text"].strip():
             r.warn(f"{w}.text", "empty: nothing is drawn")
         st = ev.get("style")
@@ -1151,3 +1153,4 @@ def normalize_review(raw, assigned, plan_generation):
             group = [merged]
         results.append(group[0])
     return done()
+
