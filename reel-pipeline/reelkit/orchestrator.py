@@ -73,8 +73,10 @@ from . import contracts, ff, fsutil, store
 from .paths import DATA, ROOT
 
 POLICY = {
-    "version": 3,
-    "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120},
+    "version": 4,
+    "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120,
+                   "gif_width": 240, "gif_fps": 6, "gif_seconds": 3, "max_gif_frames": 1440,
+                   "max_gif_bytes": 2 * 1024 * 1024},
     "sample_max_seconds": 120,      # bare files: vertical/square video up to this long is guessed to be a sample
     "spot_check": "sqrt",           # passed reels reviewed: ceil(sqrt(n)) of them (+ all warn/fail/error); all | none
     "review_retries": 2,            # re-requests of a reel whose review came back null / omitted
@@ -268,6 +270,11 @@ def _migrate_policy(p):
     missing = [k for k in POLICY if k not in p]
     for k in missing:
         p[k] = copy.deepcopy(POLICY[k])
+    if isinstance(p.get("storyboard"), dict):
+        added = [k for k in POLICY["storyboard"] if k not in p["storyboard"]]
+        for k in added:
+            p["storyboard"][k] = POLICY["storyboard"][k]
+        missing += [f"storyboard.{k}" for k in added]
     if missing:
         p["filled_defaults"] = sorted(set(p.get("filled_defaults") or []) | set(missing))
     if p.get("version", 0) < POLICY["version"]:
@@ -796,6 +803,7 @@ def _need_storyboard_approval(job):
     job["needs"] = {"step": "approve_storyboard", "agent": "user", "need_id": nid, "revision": None,
                     "issued": _now(), "storyboard_sha256": board["sha256"], "page": board["page"],
                     "sheet": board["sheet"], "manifest": board["manifest"], "frames": board["frames"],
+                    "gifs": board["gifs"], "gif_frames": board["gif_frames"],
                     "estimated_render_frames": board["estimated_render_frames"], "limitations": board["limitations"],
                     "plan_generation": job["plan_generation"], "errors": []}
     job["status"] = "needs:approve_storyboard"
@@ -1816,7 +1824,8 @@ def _c_storyboard(job, ctx, board):
     job["storyboard_approval"] = None
     job["steps"].pop("approve_storyboard", None)
     job["steps"]["storyboard"] = {"done": True, "key": ctx["key"], "at": _now()}
-    _log(job, f"storyboard: {board['frames']} stills, {board['cache_hits']} reel previews reused", "storyboard_built")
+    _log(job, f"storyboard: {board['frames']} stills + {board['gif_frames']} GIF frames, "
+         f"{board['cache_hits']} reel previews reused", "storyboard_built")
 
 
 _WORK = {"intake": _w_intake, "analyze": _w_analyze, "transcribe": _w_transcribe, "storyboard": _w_storyboard, "prepare": _w_prepare,

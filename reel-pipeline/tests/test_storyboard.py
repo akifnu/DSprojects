@@ -6,7 +6,9 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
+from PIL import Image, ImageChops, ImageSequence
 
 from reelkit import asr, batch, captions, fsutil, orchestrator as O, source, store, storyboard
 from reelkit.paths import FFMPEG
@@ -80,6 +82,26 @@ class Storyboards(unittest.TestCase):
         self.assertLess(job["storyboard"]["frames"], job["storyboard"]["estimated_render_frames"])
         self.assertTrue(Path(job["needs"]["page"]).is_file())
         self.assertTrue(storyboard.intact(job["storyboard"]))
+        self.assertEqual(len(job["needs"]["gifs"]), 2)
+        self.assertGreater(job["storyboard"]["gif_frames"], 2)
+        for gif in job["storyboard"]["gifs"]:
+            self.assertLessEqual(gif["frames"], 18)
+            self.assertLessEqual(gif["width"], 240)
+            self.assertLessEqual(gif["bytes"], 2 * 1024 * 1024)
+            with Image.open(gif["file"]) as im:
+                self.assertEqual(im.format, "GIF")
+                self.assertEqual(im.n_frames, gif["frames"])
+                self.assertEqual(im.info["loop"], 0)
+                frames = [f.convert("RGB").copy() for f in ImageSequence.Iterator(im)]
+                # Ignore the timestamp ribbon: the footage itself must move.
+                region = (0, 18, im.width, im.height)
+                self.assertIsNotNone(ImageChops.difference(frames[0].crop(region), frames[-1].crop(region)).getbbox())
+                im.seek(0)
+                durations = [f.info["duration"] for f in ImageSequence.Iterator(im)]
+                self.assertAlmostEqual(sum(durations) / 1000, gif["duration"])
+        page = Path(job["needs"]["page"]).read_text()
+        self.assertIn("Download GIF", page)
+        self.assertIn("Source range", page)
         self.assertEqual(self.preview()["needs"]["need_id"], job["needs"]["need_id"])
         for step in ("prepare", "render"):
             with self.assertRaises(O.JobError) as cm:
@@ -155,6 +177,55 @@ class Storyboards(unittest.TestCase):
         self.assertIn("exceeds", job["error"]["cause"])
         self.assertNotIn("render", job["steps"])
 
+    def test_gif_budget_fails_before_composing_any_preview(self):
+        with O._txn(self.jid) as job:
+            job["policy"]["storyboard"]["max_gif_frames"] = 1
+        with patch.object(storyboard, "_frame") as still, patch.object(storyboard, "_gif") as gif:
+            job = O.advance(self.jid)
+        still.assert_not_called()
+        gif.assert_not_called()
+        self.assertEqual(job["status"], "failed")
+        self.assertIn("GIF frames", job["error"]["cause"])
+        self.assertIsNone(job["storyboard_approval"])
+
+    def test_time_budget_stops_before_composing(self):
+        job = O._load(self.jid)
+        ticks = iter([0, 2])
+        with patch.object(storyboard, "time", SimpleNamespace(monotonic=lambda: next(ticks))), \
+                patch.object(storyboard, "_frame") as frame:
+            with self.assertRaisesRegex(storyboard.StoryboardError, "time budget"):
+                storyboard.build(job["plan"]["path"], self.root / "budget", {"timeout_s": 1})
+        frame.assert_not_called()
+
+    def test_gif_byte_budget_cannot_publish_an_approvable_board(self):
+        with O._txn(self.jid) as job:
+            job["policy"]["storyboard"]["max_gif_bytes"] = 1024
+        job = O.advance(self.jid)
+        self.assertEqual(job["status"], "failed")
+        self.assertIn("GIF exceeds", job["error"]["cause"])
+        self.assertIsNone(job["storyboard"])
+
+    def test_gif_tampering_blocks_approval_and_reuses_the_intact_cache(self):
+        job = self.preview()
+        Path(job["needs"]["gifs"][0]["file"]).write_bytes(b"tampered GIF")
+        with self.assertRaises(O.Rejected):
+            self.decide(job)
+        fresh = self.preview()
+        self.assertEqual(fresh["storyboard"]["cache_hits"], 2)
+        self.assertTrue(storyboard.intact(fresh["storyboard"]))
+        with Image.open(fresh["needs"]["gifs"][0]["file"]) as gif:
+            self.assertGreater(gif.n_frames, 1)
+
+    def test_gif_cache_damage_rebuilds_only_the_damaged_reel(self):
+        job = self.preview()
+        cache = O._dir(self.jid) / "storyboards" / "cache"
+        next(cache.glob("*/preview.gif")).write_bytes(b"broken cache")
+        # Force a fresh board, leaving the independent cache of the other reel intact.
+        Path(job["needs"]["sheet"]).unlink()
+        fresh = self.preview()
+        self.assertEqual(fresh["storyboard"]["cache_hits"], 1)
+        self.assertTrue(storyboard.intact(fresh["storyboard"]))
+
     def test_new_plan_invalidates_an_approved_storyboard(self):
         job = self.preview()
         self.decide(job)
@@ -195,9 +266,19 @@ class Storyboards(unittest.TestCase):
         job["policy"].pop("storyboard", None)
         job["policy"]["version"] = 2
         upgraded = O._migrate(job)
-        self.assertEqual(upgraded["policy"]["version"], 3)
+        self.assertEqual(upgraded["policy"]["version"], 4)
         self.assertIsNone(upgraded["storyboard_approval"])
         self.assertEqual(O._next_step(upgraded), "storyboard")
+
+    def test_existing_storyboard_policy_keeps_its_limits_and_adds_gifs(self):
+        old = copy.deepcopy(O.POLICY)
+        old["version"] = 3
+        old["storyboard"] = {"width": 180, "frames_per_reel": 2, "max_frames": 90, "timeout_s": 30}
+        migrated = O._migrate_policy(old)
+        self.assertEqual(migrated["storyboard"]["width"], 180)
+        self.assertEqual(migrated["storyboard"]["timeout_s"], 30)
+        self.assertEqual(migrated["storyboard"]["gif_fps"], 6)
+        self.assertIn("storyboard.gif_fps", migrated["filled_defaults"])
 
 
 class Workflow(unittest.TestCase):

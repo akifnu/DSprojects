@@ -87,9 +87,9 @@ reel job cancel ID | reel job retry ID | reel job list
   out-of-order or invalid answers are rejected with the reasons (exit 2) and the need stays
   open. Review results go into `inbox/<need_id>.json` (a file, never JSON in a shell
   argument); every finding is recorded whatever the repair budget.
-- **Storyboard approval.** Every accepted plan first produces a local HTML page and
-  contact sheet, then stops at `needs:approve_storyboard`. Show the user `needs.page`
-  and `needs.sheet`. Only after they approve that board, run `job approve` with the
+- **Storyboard approval.** Every accepted plan first produces a local HTML page,
+  contact sheet and one silent GIF per reel, then stops at `needs:approve_storyboard`.
+  Show the user `needs.page`, `needs.sheet` and `needs.gifs`. Only after they approve that board, run `job approve` with the
   need's ID, revision and `storyboard_sha256`, then start the job again. `job revise` records
   their feedback and reopens planning without spending the automatic QC repair
   budget. Agents cannot complete this need with `job done`. Approval has no timeout;
@@ -127,17 +127,26 @@ containers, pass `--gpus all`; the image sets NVIDIA_DRIVER_CAPABILITIES=compute
 ### Review frames before rendering
 
 The job workflow defaults to three stills per reel (hook, middle, payoff), at up to
-360 pixels wide and 640 high. It reuses the production caption/layout compositor,
-original footage and current cached transcripts, with face detection only on the
-selected frames. Per-reel caches reuse unchanged previews after feedback. Defaults
-cap a board at 240 stills and 120 seconds; exceeding a budget stops the job before
-full rendering. These limits live in the job's `policy.storyboard` snapshot.
+360 pixels wide and 640 high, plus a looping GIF showing up to three seconds of
+selected moments at 240 pixels wide and 6 fps. Excerpts advance at normal speed;
+the GIF jumps between them and includes timestamps. It is silent and uses fewer
+frames/colours than the final video. The HTML review page lets you open each GIF,
+download it and read the planned speech and shot list with original source ranges.
+
+Previews reuse the production caption/layout compositor, original footage and
+current cached transcripts, with sparse face detection and a fixed subject crop
+per excerpt. Per-reel caches reuse unchanged stills and GIFs after feedback.
+Defaults cap a board at 240 stills, 1,440 GIF frames, 2 MiB per GIF and 120 seconds;
+exceeding a budget stops the job before full rendering. The GIF frame budget is
+checked conservatively for the entire plan before composing any frames. These
+limits live in the job's `policy.storyboard` snapshot. Older jobs gain GIF defaults
+on migration while keeping their existing preview limits.
 
 Sample analysis and transcription still run before planning. Storyboarding skips
 editing-copy creation, audio preparation/mixing, full face tracking, full-source
-colour measurement and video encoding. Static previews show layout and planned
-speech; audio, animation, smooth tracking and the final colour match need the
-approved render and subsequent QC. A revised plan requires a new approval, including
+colour measurement and full video encoding. GIFs give an impression of captions,
+cuts and effects in selected moments; audio, full-speed motion, smooth tracking
+and the final colour match need the approved render and subsequent QC. A revised plan requires a new approval, including
 plans produced by the QC repair loop. Direct `reel batch` / `reel render` commands
 remain manual tools; use `reel job` for the approval workflow.
 
@@ -221,7 +230,8 @@ analysis and agent answers but real ingest/render/QC/delivery, stale and repeate
 answers, review/render fencing, damaged state recovery, cancellation/restart,
 bounded retries, worker death, immutable manifest generations, cache tampering,
 encoder fallback policy, process timeouts, atomic output failures, storyboard
-budget/cache behavior and explicit approval/stale approval rejection. A Node
+budget/cache behavior, real animated GIF decoding, GIF damage/size limits and
+explicit approval/stale approval rejection. A Node
 harness verifies the workflow returns the human need without delegating it.
 URL-import
 tests mock the downloader; they do not depend on a live media website.

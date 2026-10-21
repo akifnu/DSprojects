@@ -451,7 +451,13 @@ class Compositor:
     def _info(self, path):
         if path not in self.info:
             try:
-                self.info[path] = ff.probe(path, timeout=PROBE_TIMEOUT)
+                timeout = PROBE_TIMEOUT
+                if self.guard is not None:
+                    self.guard.check("probing preview media", stall=False)
+                    left = self.guard.remaining()
+                    if left is not None:
+                        timeout = min(timeout, max(0.001, left))
+                self.info[path] = ff.probe(path, timeout=timeout)
             except ff.FFError as e:
                 raise RenderError.wrap("decode", f"cannot probe {path}", e) from e
         return self.info[path]

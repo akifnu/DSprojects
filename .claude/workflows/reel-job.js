@@ -6,7 +6,7 @@ export const meta = {
     { title: 'Run', detail: 'reel-runner: `reel job start` + `reel job wait` (ingest, analysis, transcription, editing copies, render + QC, delivery)' },
     { title: 'Verify style', detail: 'sample-analyst checks the measured style against the sample and answers the need with `reel job done`' },
     { title: 'Plan', detail: 'reel-planner picks the moments, writes plan.json and answers the need with `reel job done`' },
-    { title: 'Storyboard', detail: 'Show the low-cost frames to the user and stop until they explicitly approve or request changes' },
+    { title: 'Storyboard', detail: 'Show the low-cost stills and silent GIFs to the user and stop until they explicitly approve or request changes' },
     { title: 'Review', detail: 'qc-reviewers judge the assigned renders in parallel; the merged envelope is recorded with every finding' },
   ],
 }
@@ -44,7 +44,7 @@ const BRIEF = [
   'd=s.get("deliver") if isinstance(s.get("deliver"),dict) else None',
   'e=s.get("error")',
   'c=lambda v:v[-600:] if isinstance(v,str) else v',
-  'K=("step","need_id","revision","agent","schema_version","plan_generation","result_file","manifest","style","plan","review","review_out","sample","sample_id","count","target_duration","lang","only","repair_round","rounds_left_by_reel","rejections","storyboard_sha256","page","sheet","frames","estimated_render_frames","limitations","storyboard_feedback")',
+  'K=("step","need_id","revision","agent","schema_version","plan_generation","result_file","manifest","style","plan","review","review_out","sample","sample_id","count","target_duration","lang","only","repair_round","rounds_left_by_reel","rejections","storyboard_sha256","page","sheet","frames","gifs","gif_frames","estimated_render_frames","limitations","storyboard_feedback")',
   'L=a.get("log") if a.get("state")=="died" or a.get("exit") not in (0,None) or e else None',
   'print(json.dumps({"id":s.get("id"),"status":s.get("status") or "unknown","terminal":bool(s.get("terminal")),"revision":s.get("revision"),"next":s.get("next"),' +
     '"needs":None if n is None else dict({k:c(n[k]) for k in K if n.get(k) is not None},errors=[str(x)[:400] for x in (n.get("errors") or [])[:10]],assigned_ids=[x.get("id") for x in n.get("assigned") or [] if isinstance(x,dict)]),' +
@@ -352,7 +352,7 @@ for (let i = 1; i <= MAX_STEPS; i++) {
   const n = st.needs
   // User consent is never delegated to a reviewer, retried or auto-completed.
   if (n && n.step === 'approve_storyboard') {
-    log('storyboard ready: present the page/contact sheet to the user; full rendering is paused')
+    log('storyboard ready: present the page, contact sheet and silent GIFs to the user; full rendering is paused')
     return { job, ...st, status: 'needs:approve_storyboard', terminal: false, requires_user_approval: true }
   }
   if (!n) {

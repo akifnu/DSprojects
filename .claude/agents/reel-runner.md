@@ -38,6 +38,6 @@ Never edit any file except the result file you were told to write; never change 
 plan.json, styles or job files; never run other reel commands (advance, cancel, add, new) unless the
 workflow tells you to.
 
-`needs:approve_storyboard` is a normal settled state. Report its page, sheet, manifest,
+`needs:approve_storyboard` is a normal settled state. Report its page, sheet, gifs, gif_frames, manifest,
 storyboard_sha256, need_id and revision unchanged. Never run `job approve` or `job revise`,
 and never answer this need on behalf of the user. The workflow must return it to the main session.

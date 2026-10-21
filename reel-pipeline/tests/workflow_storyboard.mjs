@@ -7,7 +7,8 @@ const source = readFileSync(new URL('../../.claude/workflows/reel-job.js', impor
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const calls = [];
 const need = { step: 'approve_storyboard', agent: 'user', need_id: 'approve_storyboard-3', revision: 7,
-  storyboard_sha256: 'a'.repeat(64), page: '/tmp/storyboard/index.html', sheet: '/tmp/storyboard/contact-sheet.jpg' };
+  storyboard_sha256: 'a'.repeat(64), page: '/tmp/storyboard/index.html', sheet: '/tmp/storyboard/contact-sheet.jpg',
+  gifs: [{ reel_id: 'r1', file: '/tmp/storyboard/r1-preview.gif' }], gif_frames: 18 };
 const agent = async (_prompt, opts) => {
   calls.push(opts.agentType);
   assert.equal(opts.agentType, 'reel-runner', 'human approval was delegated to an agent');

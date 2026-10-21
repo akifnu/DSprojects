@@ -82,8 +82,10 @@ Ids: `j<YYYYmmdd-HHMMSS>-<6 hex>` (created exclusively) or an explicit name matc
 {"id": "j20261020-103000-4f2a9c", "schema": 2,
  "revision": 17,                           // +1 per saved transaction (under the job's state lock)
  "status": "needs:review", "terminal": false,
- "policy": {"version": 3,
-            "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120}, …},
+ "policy": {"version": 4,
+            "storyboard": {"width": 360, "frames_per_reel": 3, "max_frames": 240, "timeout_s": 120,
+                           "gif_width": 240, "gif_fps": 6, "gif_seconds": 3,
+                           "max_gif_frames": 1440, "max_gif_bytes": 2097152}, …},
  "request": {…}, "request_hash": "<sha-256>", "request_warnings": [],
  "files": [{"path", "role", "role_source", "suggested_role"?, "asset", "sha256", "error"?, "added_rev"}],
  "inputs": {"samples": [], "sources": [], "music": [], "sfx": [], "images": []},   // asset ids by role
@@ -96,7 +98,9 @@ Ids: `j<YYYYmmdd-HHMMSS>-<6 hex>` (created exclusively) or an explicit name matc
           "entry_hashes": {"r01": "<sha-256>"}, "warnings": []},
  "plan_generation": 3,
  "storyboard": {"key", "sha256", "manifest", "page", "sheet", "files": {"<path>": "<sha256>"},
-                "frames", "cache_hits", "estimated_render_frames", "elapsed_s", "limitations"},
+                "frames", "gif_frames", "gifs": [{"reel_id", "file", "frames", "fps", "width", "height",
+                                                  "duration", "sampled_ranges": [{"s", "e"}], "bytes"}],
+                "cache_hits", "estimated_render_frames", "elapsed_s", "limitations"},
  "storyboard_approval": {"by": "user", "sha256", "plan_generation", "need_id", "at", "notes"},
  "storyboard_feedback": [{"plan_generation", "at", "notes"}],
  "render": {"seq": 4, "manifest": ".../manifests/render.4.json", "generation": 5, "counts": {…}, "encoder": {…}},
@@ -135,7 +139,7 @@ carry `model, rejections`):
   transcripts and the request; in a repair round every entry outside `only` must keep its
   contracts.plan_entry_hash.
 - `approve_storyboard`: `{agent: "user", storyboard_sha256, page, sheet, manifest,
-  frames, estimated_render_frames, limitations, plan_generation, errors}`. The workflow
+  frames, gifs, gif_frames, estimated_render_frames, limitations, plan_generation, errors}`. The workflow
   returns immediately with `requires_user_approval: true`. The main session presents the
   board and records the user's specific decision with `job approve` or `job revise`;
   both require `--need`, `--revision` and `--storyboard SHA256`. Revision additionally
@@ -158,16 +162,24 @@ JSON object per line: `at, ts, job, stage, attempt, revision, event, …`), `can
 `state.lock`. Batches of a job live in `data/batches/<job id>/`.
 
 `storyboards/board-<key>-<nonce>/` holds independently copied JPEG panels,
-`contact-sheet.jpg`, `index.html` and `manifest.json`; the manifest lists reels,
-planned speech, sampling times, durations, shot counts, limitations and frame counts.
+`<reel>-preview.gif`, `contact-sheet.jpg`, `index.html` and `manifest.json`; the manifest
+lists reels, planned speech, sampling times, original source ranges per shot, durations,
+GIF dimensions/durations/excerpt ranges, limitations, options and frame counts.
 `storyboards/cache/<reel-key>/` holds compiled preview timelines and hash-checked
-frames. Per-reel keys include source identities, transcript contents, style, fonts,
+frames and GIFs. Per-reel keys include source identities, transcript contents, style, fonts,
 output configuration and preview/compiler/renderer code. Jobs from older policy
 versions receive this mandatory gate on migration; no approval is synthesized.
 The preview compiler uses original media and cached transcripts with no audio,
 editing copies, full tracking or full-source colour measurement. Defaults are
-three sparse frames per reel, at most 360×640, 240 frames/job and 120 seconds.
-Budget violations fail the storyboard stage before full preparation/rendering.
+three sparse stills per reel, at most 360×640, plus a silent looping GIF of selected
+hook/middle/payoff excerpts (up to three seconds, 240px wide, 6fps, 2MiB).
+GIFs compose only these excerpts through the existing compositor, including text,
+motion and transitions, without running the full video/audio renderer. Their palette
+and frame rate are reduced and they do not verify smooth tracking or the final grade.
+Budgets: 240 stills/job, 1,440 GIF frames/job (conservatively reserved before composing),
+120 seconds per board build. Hash checks cover GIFs in both cache and board copies;
+damaged board copies cannot be approved, and damaged cache copies regenerate only
+the affected reel. Budget violations fail before full preparation/rendering.
 
 `deliver` = `{files: [accepted deliverable paths from manifest.deliverables], review: [failing
 reels' files], contact_sheet, manifest, generation, plan_generation, counts: {requested, planned,

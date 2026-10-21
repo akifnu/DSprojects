@@ -69,8 +69,8 @@ the files it found and the open jobs).
    approximations (fonts not exactly identified, music the user must add in-app, …). Sending the
    files is an optional adapter: use SendUserFile when that tool is available, otherwise give the
    paths.
-   - `needs:approve_storyboard` / `requires_user_approval`: present `needs.page` and
-     `needs.sheet`, planned speech and `needs.limitations`, then wait for the user's
+   - `needs:approve_storyboard` / `requires_user_approval`: present `needs.page`,
+     `needs.sheet` and `needs.gifs`, planned speech/shot list and `needs.limitations`, then wait for the user's
      decision on this board. Only the main session records a specific user approval:
      `reel job approve <id> --need <need_id> --revision <n> --storyboard <sha256>`.
      For requested changes, write feedback to a file and run
@@ -98,9 +98,11 @@ The same `--encoder` option exists on `reel render` and `reel batch`.
 
 ## Rules
 - Use the job workflow for production. Its default storyboard samples three small stills
-  per reel, caches unchanged reels and caps frame count/time. Sample analysis and ASR
+  and a silent three-second, 240px, 6fps GIF per reel, caches unchanged reels and caps
+  frame count, GIF bytes and time. Sample analysis and ASR
   still run once before planning. Full encoding, audio mixing, editing copies and full
-  tracking wait for user approval. The static board cannot verify motion/audio/final grade.
+  tracking wait for user approval. The GIF shows selected moments, not the entire reel;
+  full-speed motion, audio and final grade still need the approved render and QC.
   Do not bypass the gate with direct `reel batch` or `reel render` calls.
 - Production agents only write job artifacts (plan.json, the job's style.work.json, result and note
   files under the job). They never modify the deployed software: no code edits, commits or pushes
