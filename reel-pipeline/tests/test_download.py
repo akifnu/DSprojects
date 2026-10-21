@@ -20,12 +20,15 @@ class Download(unittest.TestCase):
         self.asset = Mock(id="asset", kind="source", meta={"sha256": "a" * 64})
         self.asset.cache.side_effect = lambda name: self.root / name
 
-    def run_import(self, kind="source", result=None, error=None):
+    def run_import(self, kind="source", result=None, error=None, max_bytes=None, progress=None):
         options = {}
         def factory(opts):
             options.update(opts)
             def extract(*args, **kw):
                 Path(opts["outtmpl"].replace("%(ext)s", "mkv")).write_bytes(b"downloaded")
+                for event in progress or []:
+                    for hook in opts.get("progress_hooks", []):
+                        hook(event)
                 if error:
                     raise error
                 return result if result is not None else {"id": "video", "title": "Talk", "height": 2160,
@@ -37,7 +40,7 @@ class Download(unittest.TestCase):
             return ydl
         with patch.dict(sys.modules, {"yt_dlp": types.SimpleNamespace(YoutubeDL=factory)}), \
                 patch.object(store, "ingest", return_value=self.asset) as ingest:
-            asset = download.ingest_url("https://example.com/video", kind)
+            asset = download.ingest_url("https://example.com/video", kind, max_bytes=max_bytes)
             ingest.assert_called_once()
         self.assertEqual(list((store.DATA / "imports").iterdir()), [])
         return options, asset
@@ -68,6 +71,22 @@ class Download(unittest.TestCase):
         for url in ("file:///tmp/video.mp4", "https://", "local.mp4"):
             with self.assertRaises(ValueError):
                 download.ingest_url(url)
+
+    def test_over_budget_media_is_rejected_before_ingest_and_cleans_staging(self):
+        with self.assertRaisesRegex(RuntimeError, "byte budget"):
+            self.run_import(max_bytes=4)
+        self.assertEqual(list((store.DATA / "imports").iterdir()), [])
+        self.assertFalse((self.root / "import.json").exists())
+
+    def test_split_stream_progress_shares_one_download_budget(self):
+        with self.assertRaisesRegex(RuntimeError, "byte budget"):
+            self.run_import(max_bytes=10, progress=[{"filename":"video.mp4","downloaded_bytes":6},
+                                                   {"filename":"audio.m4a","downloaded_bytes":6}])
+        self.assertEqual(list((store.DATA / "imports").iterdir()), [])
+
+    def test_budget_is_passed_to_the_downloader(self):
+        options, _ = self.run_import(max_bytes=1024)
+        self.assertEqual(options["max_filesize"], 1024)
 
 
 if __name__ == "__main__":

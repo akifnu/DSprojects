@@ -236,7 +236,12 @@ def transcript(asset, lang="en", provider=None):
     asr.transcribe for `provider`). A source without an audio stream has none."""
     if not asset.info.get("has_audio"):
         return asr.empty(lang, asset.info.get("duration"), provider)
-    return asr.transcribe(audio(asset), lang, cache=str(asset.cache(f"transcript.{lang}.json")), provider=provider)
+    lang = asr.check_lang(lang)
+    cache = str(asset.cache(f"transcript.{lang}.json"))
+    cached = asr._cached(cache, lang, provider, quiet=True)
+    if cached is not None:
+        return cached
+    return asr.transcribe(audio(asset), lang, cache=cache, provider=provider)
 
 
 # ------------------------------------------------------------------ look

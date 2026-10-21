@@ -494,7 +494,14 @@ def _transcript(tr):
 
 PLAN_KEYS = ("schema_version", "name", "style", "output", "sources", "music", "sfx", "reels", "meta")
 REEL_KEYS = ("id", "title", "timeline", "segments", "hook", "title_text", "caption_text", "emphasis", "cta",
-             "drop_words", "meta")
+             "drop_words", "editing", "meta")
+EDITING = {"captions": {"enabled": _boolean, "style": dict(TEXT_STYLE, size=number(lo=12, hi=160),
+            x=number(lo=-640, hi=640), y=number(lo=-640, hi=640), max_width=number(lo=.2, hi=1),
+            letter_spacing=number(lo=-10, hi=40))},
+           "crop": {"x": UNIT, "y": UNIT, "zoom": number(lo=1, hi=3)},
+           "music": {"gain_db": number(lo=-60, hi=6), "muted": _boolean},
+           "sfx": {"gain_db": number(lo=-60, hi=6), "muted": _boolean},
+           "motion": {"punch_rate": UNIT, "push_rate": UNIT}}
 SEGMENT_KEYS = ("src", "sentences", "s", "e", "meta")
 _EVEN = (lambda v: number(gt=0, integer=True)(v) or (f"{v} is odd: H.264 4:2:0 needs even dimensions" if v % 2
                                                     else None))
@@ -578,6 +585,8 @@ def _reel(r, i, reel, sources, trs, seen, used, durations):
         seen.add(rid)
         w = f"reel {rid}"
     _unknown(r, w, reel, REEL_KEYS, what=" (an effect the compiler does not implement? use meta for notes)")
+    if "editing" in reel:
+        _check(r, f"{w}.editing", reel["editing"], EDITING)
     if "meta" in reel:
         _check(r, f"{w}.meta", reel["meta"], _object)
     for k in ("title", "title_text", "cta"):
@@ -624,11 +633,13 @@ def _reel(r, i, reel, sources, trs, seen, used, durations):
             r.err(f"{w}.caption_text", "an object {sentence id: corrected text} is required")
         else:
             for k, text in ct.items():
-                if not (_int(k) and k >= 0) and not (isinstance(k, str) and k.strip().isdigit()):
+                source_key, _, sid = str(k).partition(":")
+                qualified = bool(sid) and source_key in sources and sid.isdigit()
+                if not qualified and not (_int(k) and k >= 0) and not (isinstance(k, str) and k.strip().isdigit()):
                     r.err(f"{w}.caption_text", f"key {_show(k)} is not a sentence id")
                     continue
                 _check(r, f"{w}.caption_text.{k}", text, _nonempty)
-                if all_checked and int(k) not in every:
+                if all_checked and int(sid if qualified else k) not in (sents.get(source_key, set()) if qualified else every):
                     r.warn(f"{w}.caption_text.{k}", "this sentence is not in the reel: the override is ignored")
     em = reel.get("emphasis")
     if em is not None and not (isinstance(em, list) and all(isinstance(x, str) and x.strip() for x in em)):

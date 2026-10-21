@@ -49,6 +49,14 @@ def _identity(a):
     return {"sha256": a.meta["sha256"], "size": s.st_size, "mtime_ns": s.st_mtime_ns}
 
 
+def _reel_fonts(style, reel):
+    effective = compiler.reel_style(style, reel)
+    cap = (effective.get("captions") or {}).get("style") or {}
+    title = (effective.get("titles") or {}).get("style") or cap
+    return compiler._font_deps({"styles": {"caption": cap, "title": title},
+                               "captions": [{"style": "caption"}], "text": [{"style": "title"}]})
+
+
 def _inputs(plan_path, config=None, provider="cpu"):
     plan = planlib.load(plan_path)
     style = compiler.load_style(plan["style"])
@@ -81,7 +89,8 @@ def _inputs(plan_path, config=None, provider="cpu"):
               "output": dict(plan.get("output") or {}, lang=lang)}
     source_ids = {k: {"media": _identity(a), "transcript": fsutil.sha256_json(transcripts[k])}
                   for k, a in assets.items()}
-    key = fsutil.sha256_json({"plan": fsutil.sha256_json(plan), "sources": source_ids, "shared": shared})
+    key = fsutil.sha256_json({"plan": fsutil.sha256_json(plan), "sources": source_ids, "shared": shared,
+                             "reel_fonts": {r["id"]: _reel_fonts(style, r) for r in plan["reels"]}})
     return plan, style, assets, transcripts, source_ids, shared, key
 
 
@@ -119,6 +128,8 @@ def _framed_timeline(tl, t, timeout):
     from . import reframe
     frame_tl = copy.deepcopy(tl)
     for clip in frame_tl.get("video") or []:
+        if (clip.get("meta") or {}).get("manual_crop"):
+            continue
         if not clip["start"] <= t < clip["start"] + clip["dur"]:
             continue
         media = frame_tl["media"][clip["media"]]
@@ -291,7 +302,8 @@ def build(plan_path, root, config=None, provider="cpu"):
     for reel in plan["reels"]:
         _remaining(deadline)
         used = compiler._reel_sources(reel)
-        rk = fsutil.sha256_json({"shared": shared, "reel": reel, "sources": {k: source_ids[k] for k in used}})
+        rk = fsutil.sha256_json({"shared": shared, "reel": reel, "sources": {k: source_ids[k] for k in used},
+                                "fonts": _reel_fonts(style, reel)})
         cache = root / "cache" / rk
         record = fsutil.read_json(cache / "cache.json")
         if intact(record):
@@ -323,7 +335,8 @@ def build(plan_path, root, config=None, provider="cpu"):
                          for c in tl.get("video") or []]
             r = {"id": reel["id"], "title": reel.get("title") or reel.get("title_text") or reel["id"],
                  "duration": tl["duration"], "fps": tl["fps"], "shots": len(tl.get("video") or []),
-                 "speech": " ".join(tl["meta"]["words"]), "frames": frames, "gif": gif, "shot_list": shot_list}
+                 "speech": " ".join(tl["meta"]["words"]), "frames": frames, "gif": gif, "shot_list": shot_list,
+                 "timeline": str(Path(tl_path).resolve())}
             hashes = {str(Path(tl_path).resolve()): fsutil.sha256_file(tl_path)}
             hashes.update({f["file"]: fsutil.sha256_file(f["file"]) for f in frames})
             hashes[gif["file"]] = fsutil.sha256_file(gif["file"])
@@ -340,6 +353,10 @@ def build(plan_path, root, config=None, provider="cpu"):
         shutil.copyfile(r["gif"]["file"], dest)
         r["gif"]["file"] = str(dest.resolve())
         files[r["gif"]["file"]] = fsutil.sha256_file(dest)
+        dest = board / f"{reel['id']}.timeline.json"
+        shutil.copyfile(r["timeline"], dest)
+        r["timeline"] = str(dest.resolve())
+        files[r["timeline"]] = fsutil.sha256_file(dest)
         reels.append(r)
         estimated += round(r["duration"] * r["fps"])
     total = sum(len(r["frames"]) for r in reels)

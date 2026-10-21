@@ -152,6 +152,19 @@ remain manual tools; use `reel job` for the approval workflow.
 
 ### Import footage from a URL
 
+Reel Studio is the separate browser interface for the same job workflow. Per-reel
+`editing` controls customize captions, manual crop/zoom, music/SFX gain or mute and
+motion rates without changing the shared reference style. They affect both preview
+and final compilation; render caches and QC use the effective per-reel style.
+Caption corrections may qualify sentence IDs by source (`A:12`) for multi-source
+plans. Interactive clients must quote the current job revision/plan generation
+when editing and the current storyboard need/hash when approving.
+
+Current cached transcripts are read before preparing source audio, so repeated
+validation and interactive edits do not decode the soundtrack again. URL callers
+may pass `download.ingest_url(..., max_bytes=N)` to cap split-stream download
+progress and the final file before ingestion.
+
 ```
 python3 -m pip install -r reel-pipeline/requirements-url.txt
 reel-pipeline/reel import-url 'https://…' --kind source

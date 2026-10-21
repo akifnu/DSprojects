@@ -188,6 +188,34 @@ shortfall: requested − accepted (or 0), blocked: {reel: reason}, accepted_by: 
 encoder, summary}`. Delivery reads only the manifest's deliverables (hash-checked against the
 rendered and reviewed reel), never a directory listing.
 
+## Interactive per-reel controls
+
+Plan reel entries may include `editing`. These explicit user choices override the
+shared sample style only for that reel; the same settings drive storyboard and
+final compilation, render dependencies, and the effective style used for QC:
+
+```json
+{"editing": {
+  "captions": {"enabled": true, "style": {"font": "Arimo", "size": 64, "fill": "#ffe600", "y": 280}},
+  "crop": {"x": 0.5, "y": 0.5, "zoom": 1.2},
+  "music": {"gain_db": -20, "muted": false},
+  "sfx": {"gain_db": -16, "muted": false},
+  "motion": {"punch_rate": 0.3, "push_rate": 0.2}
+}}
+```
+
+Crop centres are normalized 0–1, zoom is 1–3; manual cropping replaces automatic
+tracking. Caption style uses the regular text-style schema with UI bounds on size
+(12–160), offsets (±640), max width (0.2–1) and letter spacing (−10–40). Nested style
+edits preserve unmentioned reference fields. Music/SFX gains are −60 to +6dB;
+an explicit SFX gain overrides measured reference levels. Caption corrections can
+use `caption_text: {"A:12": "Corrected words"}` to affect sentence 12 of source A,
+without leaking into another source's sentence 12. Legacy numeric keys still work.
+
+Storyboard manifests include a hash-checked, independently copied compiled preview
+`timeline` per reel for review clients. These timelines remain low-resolution,
+audio-free previews; they are not final render authorizations.
+
 ## Review result — `inbox/<need_id>.json` (contracts.normalize_review)
 
 ```jsonc

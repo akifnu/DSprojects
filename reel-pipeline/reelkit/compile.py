@@ -460,6 +460,8 @@ def dependencies(tl, base_dir, plan=None, style=None, lang=None, provider=None, 
     and any other media), "transcripts": {source key: ASR fingerprint — the one the transcript in
     use carries, else asr's for lang / provider}, "style_sha256", "lut_sha256",
     "fonts": {"Family-weight": sha256}, "sfx": {path: sha256}, "music": sha256 | None, "renderer"}."""
+    if style is not None and (tl.get("meta") or {}).get("editing"):
+        style = reel_style(style, {"editing": tl["meta"]["editing"]})
     deps = {"assets": {}, "copies": [], "transcripts": {},
             "style_sha256": fsutil.sha256_json(style) if style is not None else None, "lut_sha256": None,
             "fonts": {}, "sfx": {}, "music": None, "renderer": render.RENDERER_VERSION}
@@ -553,13 +555,44 @@ class Context:
 
 # ------------------------------------------------------------------ compile
 
+def reel_style(style, reel):
+    """Apply validated per-reel controls without changing the shared reference style."""
+    style = json.loads(json.dumps(load_style(style)))
+    edit = reel.get("editing") or {}
+    cap = edit.get("captions") or {}
+    if cap:
+        cfg = style["captions"] = dict(style.get("captions") or {})
+        if "enabled" in cap:
+            cfg["present"] = cap["enabled"]
+        def update(base, patch):
+            for key, value in patch.items():
+                base[key] = update(dict(base.get(key) or {}), value) if isinstance(value, dict) else value
+            return base
+        cfg["style"] = update(dict(cfg.get("style") or {}), cap.get("style") or {})
+    for key in ("music", "sfx"):
+        controls = edit.get(key) or {}
+        if controls:
+            style["audio"] = dict(style.get("audio") or {})
+            cfg = style["audio"][key] = dict(style["audio"].get(key) or {})
+            if "gain_db" in controls:
+                cfg["gain_db"] = controls["gain_db"]
+            if key == "sfx" and controls.get("muted"):
+                cfg.update(on_cut_rate=0, on_caption_rate=0, events=[])
+    if edit.get("motion"):
+        style["motion"] = dict(style.get("motion") or {}, **edit["motion"])
+        if edit["motion"].get("punch_rate", 0) > 0 and len(set(style["motion"].get("punch_scales") or [1])) < 2:
+            style["motion"]["punch_scales"] = [1, 1.12]
+    return style
+
+
 def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, envelopes=None, reframing=True,
                  looks=None, provider=None, preview=False):
     """Write out_dir/timeline.json and out_dir/deps.json for one reel; returns the timeline's
     path. transcripts / copies / envelopes / looks ({source key: look}, filled in when given)
     are shared inputs (see Context); what is not given is made here."""
     plan = planlib.load(plan)
-    style = load_style(style)
+    style = reel_style(style, reel)
+    edit = reel.get("editing") or {}
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     o = plan.get("output", {})
@@ -646,10 +679,24 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
             clip["scale"] = [[0, round(a_, 4)], [dur, round(b_, 4), mot.get("push_ease") or "inout"]]
         else:
             clip["scale"] = round(z, 4)
+        crop = edit.get("crop")
+        if crop:
+            zoom = crop.get("zoom", 1)
+            if isinstance(clip["scale"], list):
+                clip["scale"] = [[key[0], key[1] * zoom, *key[2:]] for key in clip["scale"]]
+            else:
+                clip["scale"] *= zoom
         if n in trans_at:         # special transitions only between sentences, never inside one
             clip["transition_in"] = {"type": special["type"], "dur": float(special.get("dur", 0.3))}
         scale_at = (lambda sc: (lambda tt: render.kf(sc, tt, 1.0)))(clip["scale"])
-        if reframing:
+        if crop:
+            info = assets[r["src"]].info
+            cam = [(0, crop.get("x", 0.5), crop.get("y", 0.5)),
+                   (dur, crop.get("x", 0.5), crop.get("y", 0.5))]
+            clip["x"], clip["y"] = reframe.offsets(cam, info["width"], info["height"], (W, H), scale_at,
+                                                 anchor=(0.5, 0.5))
+            clip["meta"] = {"manual_crop": True}
+        elif reframing:
             info = probes.get(m["path"])
             if info is None:                # setdefault would probe every time: its default is evaluated first
                 info = probes[m["path"]] = ff.probe(m["path"])
@@ -703,7 +750,9 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
             timeline_media[akey] = source.audio(assets[r["src"]])
         clips.append({"media": akey, "start": round(t0, 4), "in": r["s"], "dur": round(r["e"] - r["s"], 4),
                       "role": "voice", "mono": True})
-    music = None if preview else plan.get("music")
+    music = None if preview or (edit.get("music") or {}).get("muted") else plan.get("music")
+    if music:
+        music = dict(music, **({"gain_db": edit["music"]["gain_db"]} if "gain_db" in (edit.get("music") or {}) else {}))
     if music:
         mpath = str(store.get(music["asset"]).path)
         timeline_media["music"] = mpath
@@ -715,7 +764,7 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
                           "gain_db": music.get("gain_db", -16), "fade_in": 0.02 if t0 else 0, "fade_out": 0.3})
             t0 += d
     sfx_cfg = _g(style, "audio", "sfx") or {}
-    prof = {} if preview else _sfx_profile(style)
+    prof = {} if preview or (edit.get("sfx") or {}).get("muted") else _sfx_profile(style)
     voice_db = None if preview else _voice_db(runs, envelopes)
     moments = []
     if "cut" in prof:
@@ -736,14 +785,17 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
         st = t_ + p["offset"] - anchor
         if d <= 0 or st < 0 or st > total - 0.05:
             continue
-        if p["level_db"] is not None and voice_db is not None:
+        if "gain_db" in (edit.get("sfx") or {}):
+            gain = edit["sfx"]["gain_db"]
+        elif p["level_db"] is not None and voice_db is not None:
             gain = p["level_db"] + voice_db + VOICE_CHAIN_DB - level
         else:
             gain = float(sfx_cfg.get("gain_db", -10))
         key = f"sfx_{kd}"
         timeline_media.setdefault(key, path_)
+        floor = -60.0 if "gain_db" in (edit.get("sfx") or {}) else -40.0
         clips.append({"media": key, "start": round(st, 3), "in": 0, "dur": round(min(d, total - st), 3),
-                      "role": "sfx", "gain_db": round(min(12.0, max(-40.0, gain)), 1)})
+                      "role": "sfx", "gain_db": round(min(12.0, max(floor, gain)), 1)})
 
     # ---- grade
     g = style.get("grade") or {}
@@ -779,7 +831,7 @@ def compile_reel(plan, reel, style, out_dir, transcripts=None, copies=None, enve
           "encode": dict(QUALITY.get(o.get("quality", "final"), QUALITY["final"])),
           "meta": {"reel": reel["id"], "title": reel.get("title"), "runs": [{"src": r["src"], "s": r["s"], "e": r["e"]}
                                                                          for r in runs],
-                   "words": [w["w"] for w in words]}}
+                   "words": [w["w"] for w in words], "editing": edit}}
     # JSON round trip first: the dependencies (and the batch's render key) see what is on disk
     tl = json.loads(json.dumps(tl, ensure_ascii=False))
     deps = dependencies(tl, str(out_dir), plan, style, lang, provider, transcripts)

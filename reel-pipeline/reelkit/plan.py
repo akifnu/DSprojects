@@ -213,7 +213,10 @@ def resolve_reel(reel, transcripts, envelopes=None, max_pause=0.25):
         kept, removed = clean(tr, idxs, reel.get("drop_words", ()))
         if not kept:
             continue
-        shown = _override(tr, kept, reel.get("caption_text"))
+        overrides = reel.get("caption_text") or {}
+        local = {k: v for k, v in overrides.items() if ":" not in str(k)}
+        local.update({str(k).split(":", 1)[1]: v for k, v in overrides.items() if str(k).startswith(src + ":")})
+        shown = _override(tr, kept, local)
         sof = _sentence_of(tr)
         for r in runs(tr, kept, removed, envelopes.get(src), max_pause, src):
             ws = []

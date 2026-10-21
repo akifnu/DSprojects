@@ -1087,16 +1087,23 @@ class _Batch:
             self.log(f"{rid}: {msg}")
             return self.fail(e, "timeline", msg), None
         key = e["render_key"] = render_key(tl, deps, self.enc["actual"], self.draft, self.renderer)
+        style_p, qk = self.style_p, self.qk
+        if r.get("editing"):
+            from .compile import reel_style
+            effective = reel_style(self.style, r)
+            style_p = rdir / "style.effective.json"
+            fsutil.atomic_write_json(style_p, effective)
+            qk = qc_key(fsutil.sha256_json(effective), self.asr, self.lang)
         out = rdir / f"{rid}.mp4"
         job = {"id": rid, "timeline": str(tl_path), "out": str(out), "draft": self.draft, "encoder": self.enc["actual"],
-               "style": str(self.style_p), "asr": self.asr, "lang": self.lang,
+               "style": str(style_p), "qc_key": qk, "asr": self.asr, "lang": self.lang,
                "limit": _limit(tl.get("duration"), self.reel_timeout_s), "stall_s": STALL_S, "attempt": 1,
                "qc_only": False, "plan_entry_hash": peh, "render_key": key, "render_sha256": None, "render_s": None}
         sha, why, damaged = _render_current(rec, key, peh, out)
         if sha:
             e["render_sha256"] = job["render_sha256"] = sha
             job.update(render_s=rec.get("render_s"), qc_only=True)
-            rep, why = _qc_current(rec, self.qk, rdir)
+            rep, why = _qc_current(rec, qk, rdir)
             if rep is not None:
                 self.apply_qc(e, rep, rdir)
                 e.update(cached=True, render_s=rec.get("render_s"), qc_s=rec.get("qc_s"))
@@ -1255,7 +1262,7 @@ class _Batch:
                "qc_sha256": None, "qc_verdict": None, "qc_s": None, "finished": _now()}
         qcd = bool(res and res.get("qc_verdict"))
         if qcd:
-            rec.update(qc_key=self.qk, qc_sha256=res.get("qc_sha256"), qc_verdict=res["qc_verdict"],
+            rec.update(qc_key=job.get("qc_key", self.qk), qc_sha256=res.get("qc_sha256"), qc_verdict=res["qc_verdict"],
                        qc_s=res.get("qc_s"))
         rdir = Path(job["out"]).parent
         name, stale = ("cache.json", "render.json") if qcd else ("render.json", "cache.json")

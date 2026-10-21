@@ -18,7 +18,7 @@ class _Logger:
     error = warning
 
 
-def ingest_url(url, kind="source"):
+def ingest_url(url, kind="source", max_bytes=None):
     """Download one video/audio URL without transcoding, ingest and clean staging.
     Returns an Asset. yt-dlp remains optional for callers using local files."""
     parsed = urlsplit(url)
@@ -26,6 +26,8 @@ def ingest_url(url, kind="source"):
         raise ValueError("a complete http(s) media URL is required")
     if kind not in ("sample", "source", "music", "sfx"):
         raise ValueError("URL imports support sample, source, music or sfx")
+    if max_bytes is not None and (isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0):
+        raise ValueError("max_bytes must be a positive integer")
     try:
         from yt_dlp import YoutubeDL
     except ImportError:
@@ -38,6 +40,13 @@ def ingest_url(url, kind="source"):
                    "ffmpeg_location": str(Path(FFMPEG).parent),
                    "noplaylist": True, "playlist_items": "1", "quiet": True, "noprogress": True,
                    "socket_timeout": 30, "retries": 3, "fragment_retries": 3, "logger": _Logger()}
+        if max_bytes is not None:
+            received = {}
+            def budget(event):
+                received[event.get("filename", "download")] = event.get("downloaded_bytes") or 0
+                if sum(received.values()) > max_bytes:
+                    raise RuntimeError(f"download exceeds the {max_bytes} byte budget")
+            options.update(max_filesize=max_bytes, progress_hooks=[budget])
         try:
             with YoutubeDL(options) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -49,6 +58,8 @@ def ingest_url(url, kind="source"):
                  (".mp4", ".mkv", ".webm", ".mov", ".avi", ".m4v", ".mp3", ".m4a", ".ogg", ".opus", ".wav", ".flac")]
         if len(files) != 1:
             raise RuntimeError("yt-dlp did not produce exactly one completed media file")
+        if max_bytes is not None and files[0].stat().st_size > max_bytes:
+            raise RuntimeError(f"download exceeds the {max_bytes} byte budget")
         asset = store.ingest(files[0], kind)
         fsutil.atomic_write_json(asset.cache("import.json"), {
             "url": info.get("webpage_url") or url, "title": info.get("title"),
