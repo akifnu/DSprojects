@@ -8,7 +8,7 @@ from pathlib import Path
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
@@ -317,7 +317,31 @@ async def lifespan(app):
     yield
 
 
-app = Starlette(routes=routes, lifespan=lifespan)
+ACCESS_KEY = os.environ.get("STUDIO_ACCESS_KEY", "")
+
+
+class AccessKey:
+    """Optional shared-link protection: with STUDIO_ACCESS_KEY set, the first visit must carry
+    ?key=<key>; it is then kept in a cookie. Without the key every request gets 401."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if not ACCESS_KEY or scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        req = Request(scope)
+        if req.cookies.get("studio_key") == ACCESS_KEY:
+            return await self.app(scope, receive, send)
+        if req.query_params.get("key") == ACCESS_KEY:
+            rest = req.url.remove_query_params("key").query
+            resp = RedirectResponse(req.url.path + (f"?{rest}" if rest else ""), status_code=303)
+            resp.set_cookie("studio_key", ACCESS_KEY, httponly=True, samesite="lax", secure=True, max_age=7 * 86400)
+            return await resp(scope, receive, send)
+        return await PlainTextResponse("Access key required — use the full link you were given.", 401)(scope, receive, send)
+
+
+app = AccessKey(Starlette(routes=routes, lifespan=lifespan))
 
 if __name__ == "__main__":
     import uvicorn
