@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reels Studio</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <button class="brand" id="homeBtn" title="All projects">▶ Reels Studio</button>
+  <input id="title" class="title hidden" aria-label="Project title">
+  <nav id="stages" class="stages hidden" role="tablist">
+    <button role="tab" data-stage="cut" class="on">Cut</button>
+    <button role="tab" data-stage="visuals">Visuals</button>
+    <button role="tab" data-stage="sound">Sound</button>
+    <button role="tab" data-stage="finish">Finish</button>
+  </nav>
+  <div class="spacer"></div>
+  <div id="editTools" class="tools hidden">
+    <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+    <button id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+    <span id="saveState" class="save" aria-live="polite">Saved</span>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden" role="alert"></div>
+
+<main id="home" class="home">
+  <section class="hero">
+    <h1>Turn a rough talking-head take into a reel</h1>
+    <p>Upload a video. You get a transcript-led AI rough cut that you can review, restore and restyle — nothing is ever deleted from your source.</p>
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mp4,.mov,.m4v,.webm" hidden>
+      <strong>Drop a video here</strong> or click to choose · MP4 / MOV
+    </label>
+  </section>
+  <h2>Recent projects</h2>
+  <div id="projectList" class="plist"></div>
+</main>
+
+<main id="editor" class="editor hidden">
+  <section class="pane transcript-pane">
+    <div class="pane-head">
+      <h2>Transcript</h2>
+      <span class="hint">Click a word to seek · Shift-click to select a range · Double-click to correct text</span>
+    </div>
+    <div id="selbar" class="selbar">
+      <span id="selInfo">No selection</span>
+      <button data-act="cut">Cut</button>
+      <button data-act="restore">Restore</button>
+      <button data-act="emph">Emphasise</button>
+      <button data-act="clear">Clear</button>
+    </div>
+    <div id="transcript" class="transcript" tabindex="0"></div>
+  </section>
+
+  <section class="pane preview-pane">
+    <div class="stage-box">
+      <div id="frame" class="frame">
+        <video id="video" playsinline preload="auto"></video>
+        <div id="ovLayer" class="ov-layer"></div>
+        <div id="capLayer" class="cap-layer"></div>
+        <span class="prov">Provisional preview</span>
+      </div>
+    </div>
+    <div class="transport">
+      <button id="playBtn" aria-label="Play">▶</button>
+      <span id="clock" class="clock">0:00.0 / 0:00.0</span>
+    </div>
+  </section>
+
+  <section class="pane inspector" id="inspector"></section>
+
+  <section class="timeline-wrap">
+    <canvas id="timeline" height="96" aria-label="Timeline"></canvas>
+  </section>
+</main>
+
+<template id="tplProject">
+  <article class="pcard"><img alt=""><div><h3></h3><p></p></div></article>
+</template>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
