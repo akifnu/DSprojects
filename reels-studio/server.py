@@ -336,7 +336,7 @@ class AccessKey:
         if req.query_params.get("key") == ACCESS_KEY:
             rest = req.url.remove_query_params("key").query
             resp = RedirectResponse(req.url.path + (f"?{rest}" if rest else ""), status_code=303)
-            resp.set_cookie("studio_key", ACCESS_KEY, httponly=True, samesite="lax", secure=True, max_age=7 * 86400)
+            resp.set_cookie("studio_key", ACCESS_KEY, httponly=True, samesite="none", secure=True, max_age=7 * 86400)
             return await resp(scope, receive, send)
         return await PlainTextResponse("Access key required — use the full link you were given.", 401)(scope, receive, send)
 

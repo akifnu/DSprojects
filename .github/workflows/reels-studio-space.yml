@@ -1,0 +1,33 @@
+name: Deploy Reels Studio to Hugging Face
+
+# Needs repository secrets HF_TOKEN (a Hugging Face token with write access) and
+# STUDIO_ACCESS_KEY (the key your test link carries), and optionally the repository
+# variable HF_SPACE (default: <your HF user>/reels-studio).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, ccr-d0aea683-50axld]
+    paths: [reels-studio/**, reel-pipeline/reelkit/**, reel-pipeline/setup.sh, reel-pipeline/requirements.txt,
+            .github/workflows/reels-studio-space.yml]
+
+concurrency: reels-studio-space
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q "huggingface_hub>=0.25"
+      - name: Push the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          STUDIO_ACCESS_KEY: ${{ secrets.STUDIO_ACCESS_KEY }}
+          HF_SPACE: ${{ vars.HF_SPACE || 'reels-studio' }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$STUDIO_ACCESS_KEY" ]; then
+            echo "::warning::Add the HF_TOKEN and STUDIO_ACCESS_KEY repository secrets to deploy the Space."; exit 0
+          fi
+          python reels-studio/deploy/push_space.py

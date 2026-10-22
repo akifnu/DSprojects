@@ -42,3 +42,16 @@ local app for now), and an LLM rough-cut provider (`studio/edit.rough_cut` is th
 - `studio/jobs.py` – durable background jobs (processing, export)
 - `studio/store.py` – file-backed projects, immutable revisions (stale writes → 409), presets, library
 - `static/` – the editor (vanilla JS)
+
+## Test link (Hugging Face Space)
+
+1. Create a Hugging Face token with **write** access (huggingface.co → Settings → Access Tokens).
+2. In this GitHub repo → Settings → Secrets and variables → Actions, add secrets
+   `HF_TOKEN` (that token) and `STUDIO_ACCESS_KEY` (any password you choose).
+   Optional variable `HF_SPACE` (default `reels-studio`).
+3. Push to `main` or the dev branch (or run the *Deploy Reels Studio to Hugging Face* workflow).
+   The first build takes ~10 minutes (ffmpeg + 1.6 GB of speech models).
+4. Open `https://<hf-user>-reels-studio.hf.space/?key=<STUDIO_ACCESS_KEY>`.
+
+Manual alternative: `HF_TOKEN=… HF_SPACE=… STUDIO_ACCESS_KEY=… python3 reels-studio/deploy/push_space.py`.
+Free Spaces have no persistent disk: projects disappear when the Space restarts or sleeps.
